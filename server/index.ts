@@ -3,6 +3,7 @@ import cors from 'cors';
 import { matchesRouter } from './routes/matches';
 import { tournamentsRouter } from './routes/tournaments';
 import { leaderboardRouter } from './routes/leaderboard';
+import { gameRouter } from './routes/game';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -13,7 +14,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // Request logging
 app.use((req, _res, next) => {
-  if (req.path.startsWith('/api')) {
+  if (req.path.startsWith('/api') && req.path !== '/api/game/events') {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   }
   next();
@@ -30,6 +31,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Mount Routes
+app.use('/api/game', gameRouter);
 app.use('/api/matches', matchesRouter);
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api/models', leaderboardRouter);

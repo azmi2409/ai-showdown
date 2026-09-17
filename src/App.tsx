@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo, useSyncExternalStore } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useSyncExternalStore } from 'react';
+import { Chess } from 'chess.js';
 import { Header, ActiveTab } from './components/Header';
 import { ChessBoard } from './components/ChessBoard';
 import { PlayerPanel } from './components/PlayerPanel';
@@ -8,8 +9,7 @@ import { NeuralFeed } from './components/NeuralFeed';
 import { TournamentView } from './components/TournamentView';
 import { LeaderboardView } from './components/LeaderboardView';
 import { SettingsView } from './components/SettingsView';
-import { GameStateStore } from './services/GameStateStore';
-import { GameOrchestrator, SpeedMode } from './services/GameOrchestrator';
+import { gameClient, SpeedMode } from './services/gameClient';
 import { storageService } from './services/storageService';
 import { audioService } from './services/audioService';
 import { apiService } from './services/apiService';
@@ -20,7 +20,6 @@ import {
   BenchmarkMetrics,
   GameResult,
   ModelConfig,
-  NeuralLogEntry,
   TimeControl,
   TournamentMatch,
   TournamentState,
@@ -89,45 +88,48 @@ export const App: React.FC = () => {
     matchIndex: number;
   } | null>(null);
 
-  // Initialize GameStateStore & Orchestrator with persistence restoration
-  const store = useMemo(() => {
-    const saved = storageService.getSavedGameState();
-    const gs = new GameStateStore(saved?.timeControl || initialSelections?.timeControl || timeControl);
-    if (saved) {
-      gs.restore(saved);
-    }
-    return gs;
-  }, []);
-
-  // Telemetry logs
-  const [neuralLogs, setNeuralLogs] = useState<NeuralLogEntry[]>(() => store.getNeuralLogs());
-
-  const orchestrator = useMemo(
-    () => new GameOrchestrator(store, whiteModel, blackModel, apiKeys),
-    []
+  // Subscribe to backend SSE live game state
+  const liveGame = useSyncExternalStore(
+    (cb) => gameClient.subscribe(cb),
+    () => gameClient.getState()
   );
 
-  // Sync state store with React
-  const subscribeStore = (cb: () => void) => store.subscribe(cb);
-  const getStoreVersion = () =>
-    `${store.getFEN()}_${store.getStatus()}_${store.getMoves().length}_${store.getNeuralLogs().length}_${store.getActiveThinking().side}_${store.getActiveThinking().thoughtText || ''}_${JSON.stringify(
-      store.getClocks()
-    )}`;
-  useSyncExternalStore(subscribeStore, getStoreVersion);
+  // Create lightweight Chess instance from server FEN for board rendering
+  const liveChess = useMemo(() => {
+    try {
+      return new Chess(liveGame.fen);
+    } catch {
+      return new Chess();
+    }
+  }, [liveGame.fen]);
 
-  // Connect orchestrator callbacks
+  // Material balance calculation from board state
+  const material = useMemo(() => {
+    const pieceValues: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+    let whiteScore = 0;
+    let blackScore = 0;
+    const board = liveChess.board();
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const piece = board[r][c];
+        if (piece) {
+          const val = pieceValues[piece.type] || 0;
+          if (piece.color === 'w') whiteScore += val;
+          else blackScore += val;
+        }
+      }
+    }
+    return {
+      white: whiteScore,
+      black: blackScore,
+      delta: whiteScore - blackScore,
+    };
+  }, [liveChess]);
+
+  // Keep speed mode synced with backend
   useEffect(() => {
-    orchestrator.setNeuralLogCallback((logs) => setNeuralLogs(logs));
-    orchestrator.setSpeedMode(speedMode);
+    gameClient.setSpeedMode(speedMode);
   }, [speedMode]);
-
-  useEffect(() => {
-    orchestrator.setModels(whiteModel, blackModel);
-  }, [whiteModel, blackModel]);
-
-  useEffect(() => {
-    orchestrator.setApiKeys(apiKeys);
-  }, [apiKeys]);
 
   // Auto-persist arena selections
   useEffect(() => {
@@ -151,22 +153,6 @@ export const App: React.FC = () => {
     audioService.setEnabled(audioEnabled);
   }, [audioEnabled]);
 
-  // Auto-persist game state on store updates
-  useEffect(() => {
-    let timer: any;
-    const unsubscribe = store.subscribe(() => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        storageService.saveGameState(store.serialize());
-      }, 250);
-    });
-
-    return () => {
-      clearTimeout(timer);
-      unsubscribe();
-    };
-  }, [store]);
-
   // Sync leaderboard from backend on mount
   useEffect(() => {
     apiService.getLeaderboard().then((backendMetrics) => {
@@ -180,72 +166,47 @@ export const App: React.FC = () => {
     });
   }, []);
 
-  // Handle Game Finished Callback
+  // Tournament launch helper
+  const launchTournamentMatch = useCallback(
+    (match: TournamentMatch, roundIndex: number, matchIndex: number) => {
+      if (!match.white || !match.black) return;
+
+      currentTourneyMatchRef.current = { match, roundIndex, matchIndex };
+      setWhiteModel(match.white);
+      setBlackModel(match.black);
+      const matchTc = tournament?.timeControl || timeControl;
+      setTimeControl(matchTc);
+
+      setActiveTab('arena');
+
+      gameClient.startGame({
+        whiteModel: match.white,
+        blackModel: match.black,
+        timeControl: matchTc,
+        speedMode,
+        tournamentId: tournament?.id || null,
+        roundNumber: roundIndex + 1,
+        matchIndex,
+      });
+    },
+    [tournament, timeControl, speedMode]
+  );
+
+  // Handle Game Over (Update Tournament bracket & Refresh Leaderboard)
   useEffect(() => {
-    orchestrator.setGameFinishedCallback((result: GameResult) => {
-      const matchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const tournamentId = tournament?.id || null;
-      const tourneyInfo = currentTourneyMatchRef.current;
-
-      const neuralLogs = store.getNeuralLogs();
-      const whiteLogs = neuralLogs.filter((l) => l.turn === 'w');
-      const blackLogs = neuralLogs.filter((l) => l.turn === 'b');
-      const whiteAvgLatency =
-        whiteLogs.length > 0
-          ? Math.round(whiteLogs.reduce((acc, l) => acc + l.totalLatencyMs, 0) / whiteLogs.length)
-          : 0;
-      const blackAvgLatency =
-        blackLogs.length > 0
-          ? Math.round(blackLogs.reduce((acc, l) => acc + l.totalLatencyMs, 0) / blackLogs.length)
-          : 0;
-      const whiteToolCalls = whiteLogs.reduce((acc, l) => acc + l.toolCalls.length, 0);
-      const blackToolCalls = blackLogs.reduce((acc, l) => acc + l.toolCalls.length, 0);
-
-      // Record match to Express backend with advanced ELO calculation
-      apiService
-        .recordMatch({
-          matchId,
-          tournamentId,
-          roundNumber: tourneyInfo ? tourneyInfo.roundIndex + 1 : undefined,
-          matchIndex: tourneyInfo ? tourneyInfo.matchIndex : undefined,
-          whiteModelId: whiteModel.id,
-          whiteModelName: whiteModel.name,
-          blackModelId: blackModel.id,
-          blackModelName: blackModel.name,
-          winner: result.winner,
-          reason: result.reason,
-          movesCount: store.getMoves().length,
-          durationMs: 0,
-          pgn: store.exportPGN(whiteModel.name, blackModel.name),
-          finalFen: store.getFEN(),
-          timeControl,
-          telemetry: {
-            whiteIllegalMoves: store.getIllegalAttempts('w'),
-            blackIllegalMoves: store.getIllegalAttempts('b'),
-            whiteAvgLatencyMs: whiteAvgLatency,
-            blackAvgLatencyMs: blackAvgLatency,
-            whiteToolCallsCount: whiteToolCalls,
-            blackToolCallsCount: blackToolCalls,
-            whiteForfeit: result.winner === 'b' && result.reason === 'resignation',
-            blackForfeit: result.winner === 'w' && result.reason === 'resignation',
-          },
-        })
-        .then(() => {
-          // Refresh benchmark metrics from backend
-          apiService.getLeaderboard().then((backendMetrics) => {
-            if (backendMetrics && backendMetrics.length > 0) {
-              const mapped: Record<string, BenchmarkMetrics> = {};
-              backendMetrics.forEach((m) => {
-                mapped[m.modelId] = m;
-              });
-              setMetrics(mapped);
-            } else {
-              setMetrics(storageService.getBenchmarkMetrics());
-            }
+    gameClient.setGameOverCallback((result: GameResult) => {
+      // Refresh benchmark metrics from Express backend
+      apiService.getLeaderboard().then((backendMetrics) => {
+        if (backendMetrics && backendMetrics.length > 0) {
+          const mapped: Record<string, BenchmarkMetrics> = {};
+          backendMetrics.forEach((m) => {
+            mapped[m.modelId] = m;
           });
-        });
+          setMetrics(mapped);
+        }
+      });
 
-      // If playing a tournament match, update tournament bracket
+      // If playing a tournament match, update bracket and launch next match if auto-running
       if (tournament && currentTourneyMatchRef.current) {
         const { roundIndex, matchIndex } = currentTourneyMatchRef.current;
         const updatedTourney = TournamentManager.recordMatchResult(
@@ -259,7 +220,6 @@ export const App: React.FC = () => {
         apiService.saveTournament(updatedTourney);
         currentTourneyMatchRef.current = null;
 
-        // Auto-run next match after 2.5s delay if auto-running is enabled
         if (isAutoRunningTournament && updatedTourney.status !== 'completed') {
           setTimeout(() => {
             const nextMatch = TournamentManager.getNextPendingMatch(updatedTourney);
@@ -272,34 +232,37 @@ export const App: React.FC = () => {
         }
       }
     });
-  }, [tournament, isAutoRunningTournament, whiteModel, blackModel, timeControl]);
+  }, [tournament, isAutoRunningTournament, timeControl, speedMode, launchTournamentMatch]);
 
-  // Actions
+  // Arena Actions
   const handleStartGame = () => {
-    orchestrator.startGame();
+    gameClient.startGame({
+      whiteModel,
+      blackModel,
+      timeControl,
+      speedMode,
+      tournamentId: tournament?.id || null,
+    });
   };
 
   const handlePauseGame = () => {
-    orchestrator.pauseGame();
+    gameClient.pauseGame();
   };
 
   const handleResumeGame = () => {
-    orchestrator.resumeGame();
+    gameClient.resumeGame();
   };
 
   const handleStepMove = () => {
-    orchestrator.stepMove();
+    gameClient.stepMove();
   };
 
   const handleForfeit = () => {
-    orchestrator.forfeitGame(store.getTurn());
+    gameClient.forfeitGame(liveGame.turn);
   };
 
   const handleResetGame = () => {
-    orchestrator.stopGame();
-    store.reset(timeControl);
-    storageService.saveGameState(store.serialize());
-    setNeuralLogs([]);
+    gameClient.resetGame(timeControl);
   };
 
   const handleToggleAudio = () => {
@@ -309,7 +272,21 @@ export const App: React.FC = () => {
   };
 
   const handleExportPGN = () => {
-    const pgn = store.exportPGN(whiteModel.name, blackModel.name);
+    const ch = new Chess();
+    for (const m of liveGame.moves) {
+      try {
+        ch.move(m.san);
+      } catch {}
+    }
+    ch.header(
+      'White',
+      liveGame.whiteModel?.name || whiteModel.name,
+      'Black',
+      liveGame.blackModel?.name || blackModel.name,
+      'Date',
+      new Date().toISOString().split('T')[0]
+    );
+    const pgn = ch.pgn();
     const blob = new Blob([pgn], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -332,33 +309,6 @@ export const App: React.FC = () => {
     storageService.saveTournament(newTourney);
   };
 
-  const launchTournamentMatch = (
-    match: TournamentMatch,
-    roundIndex: number,
-    matchIndex: number
-  ) => {
-    if (!match.white || !match.black) return;
-
-    currentTourneyMatchRef.current = { match, roundIndex, matchIndex };
-    setWhiteModel(match.white);
-    setBlackModel(match.black);
-    setTimeControl(tournament?.timeControl || timeControl);
-
-    // Reset store and start
-    orchestrator.stopGame();
-    const matchTc = tournament?.timeControl || timeControl;
-    store.reset(matchTc);
-    storageService.saveGameState(store.serialize());
-    setNeuralLogs([]);
-
-    // Switch view to arena so user can see the live match!
-    setActiveTab('arena');
-
-    setTimeout(() => {
-      orchestrator.setModels(match.white!, match.black!);
-      orchestrator.startGame();
-    }, 400);
-  };
 
   const handleAutoRunToggle = () => {
     if (isAutoRunningTournament) {
@@ -400,27 +350,29 @@ export const App: React.FC = () => {
   };
 
   const handleResetAllData = () => {
-    orchestrator.stopGame();
+    gameClient.resetGame(timeControl);
     storageService.resetAllData();
     setMetrics(storageService.getBenchmarkMetrics());
     setCustomModels([]);
     setAllModels(storageService.getAllModels());
     setTournament(null);
-    store.reset(timeControl);
-    storageService.saveGameState(store.serialize());
-    setNeuralLogs([]);
   };
 
-  // Derived state from store
-  const clocks = store.getClocks();
-  const captures = store.getCaptures();
-  const material = store.getMaterialBalance();
-  const moves = store.getMoves();
-  const lastMove = store.getLastMove();
-  const gameStatus = store.getStatus();
-  const activeTurn = store.getTurn();
-  const inCheck = store.isCheck();
-  const gameResult = store.getResult();
+  // Derived state
+  const lastMove =
+    liveGame.moves.length > 0 ? liveGame.moves[liveGame.moves.length - 1] : undefined;
+  const activeThinking = liveGame.activeThinking;
+  const allLogs = liveGame.neuralLogs;
+  const latestWhiteLog = [...allLogs].reverse().find((l) => l.turn === 'w');
+  const latestBlackLog = [...allLogs].reverse().find((l) => l.turn === 'b');
+  const latestWhiteThought =
+    (activeThinking.side === 'w' && activeThinking.thoughtText) ||
+    latestWhiteLog?.toolCalls?.find((t) => t.name === 'make_move')?.arguments?.reasoning ||
+    latestWhiteLog?.textContent;
+  const latestBlackThought =
+    (activeThinking.side === 'b' && activeThinking.thoughtText) ||
+    latestBlackLog?.toolCalls?.find((t) => t.name === 'make_move')?.arguments?.reasoning ||
+    latestBlackLog?.textContent;
 
   return (
     <div className="app-container">
@@ -428,7 +380,7 @@ export const App: React.FC = () => {
       <Header
         activeTab={activeTab}
         onSelectTab={setActiveTab}
-        isGameActive={gameStatus === 'active'}
+        isGameActive={liveGame.status === 'active'}
         isTournamentActive={tournament?.status === 'running' || isAutoRunningTournament}
       />
 
@@ -439,26 +391,23 @@ export const App: React.FC = () => {
           <section className="arena-sidebar-left">
             <ArenaControls
               models={allModels}
-              whiteModel={whiteModel}
-              blackModel={blackModel}
+              whiteModel={liveGame.status === 'idle' ? whiteModel : liveGame.whiteModel || whiteModel}
+              blackModel={liveGame.status === 'idle' ? blackModel : liveGame.blackModel || blackModel}
               timeControl={timeControl}
               speedMode={speedMode}
               audioEnabled={audioEnabled}
-              gameStatus={gameStatus}
+              gameStatus={liveGame.status}
               onSelectWhite={(m) => {
                 setWhiteModel(m);
-                store.reset(timeControl);
-                storageService.saveGameState(store.serialize());
+                gameClient.resetGame(timeControl);
               }}
               onSelectBlack={(m) => {
                 setBlackModel(m);
-                store.reset(timeControl);
-                storageService.saveGameState(store.serialize());
+                gameClient.resetGame(timeControl);
               }}
               onSelectTimeControl={(tc) => {
                 setTimeControl(tc);
-                store.reset(tc);
-                storageService.saveGameState(store.serialize());
+                gameClient.resetGame(tc);
               }}
               onSetSpeedMode={setSpeedMode}
               onToggleAudio={handleToggleAudio}
@@ -470,99 +419,81 @@ export const App: React.FC = () => {
               onResetGame={handleResetGame}
             />
 
-            <MoveHistory moves={moves} onExportPGN={handleExportPGN} />
+            <MoveHistory moves={liveGame.moves} onExportPGN={handleExportPGN} />
           </section>
 
           {/* Center Column: Player Panels & Chess Board */}
-          {/* Center Column: Player Panels & Chess Board */}
-          {(() => {
-            const activeThinking = store.getActiveThinking();
-            const allLogs = store.getNeuralLogs();
-            const latestWhiteLog = [...allLogs].reverse().find((l) => l.turn === 'w');
-            const latestBlackLog = [...allLogs].reverse().find((l) => l.turn === 'b');
-            const latestWhiteThought =
-              latestWhiteLog?.toolCalls.find((t) => t.name === 'make_move')?.arguments?.reasoning ||
-              latestWhiteLog?.textContent;
-            const latestBlackThought =
-              latestBlackLog?.toolCalls.find((t) => t.name === 'make_move')?.arguments?.reasoning ||
-              latestBlackLog?.textContent;
+          <section className="arena-center-stage">
+            {/* Black Player Panel (Top) */}
+            <PlayerPanel
+              model={liveGame.blackModel || blackModel}
+              color="black"
+              isTurn={liveGame.turn === 'b' && liveGame.status === 'active'}
+              timeRemainingMs={liveGame.clocks.b}
+              capturedPieces={liveGame.captures.b}
+              materialDelta={-material.delta}
+              isThinking={activeThinking.side === 'b'}
+              thoughtText={latestBlackThought}
+            />
 
-            return (
-              <>
-                <section className="arena-center-stage">
-                  {/* Black Player Panel (Top) */}
-                  <PlayerPanel
-                    model={blackModel}
-                    color="black"
-                    isTurn={activeTurn === 'b' && gameStatus === 'active'}
-                    timeRemainingMs={clocks.b}
-                    capturedPieces={captures.b}
-                    materialDelta={-material.delta}
-                    isThinking={activeThinking.side === 'b'}
-                    thoughtText={latestBlackThought}
-                  />
+            {/* Chess Board */}
+            <ChessBoard
+              chess={liveChess}
+              lastMove={lastMove}
+              inCheck={liveGame.inCheck}
+              turn={liveGame.turn}
+            />
 
-                  {/* Chess Board */}
-                  <ChessBoard
-                    chess={store.getChess()}
-                    lastMove={lastMove}
-                    inCheck={inCheck}
-                    turn={activeTurn}
-                  />
+            {/* White Player Panel (Bottom) */}
+            <PlayerPanel
+              model={liveGame.whiteModel || whiteModel}
+              color="white"
+              isTurn={liveGame.turn === 'w' && liveGame.status === 'active'}
+              timeRemainingMs={liveGame.clocks.w}
+              capturedPieces={liveGame.captures.w}
+              materialDelta={material.delta}
+              isThinking={activeThinking.side === 'w'}
+              thoughtText={latestWhiteThought}
+            />
 
-                  {/* White Player Panel (Bottom) */}
-                  <PlayerPanel
-                    model={whiteModel}
-                    color="white"
-                    isTurn={activeTurn === 'w' && gameStatus === 'active'}
-                    timeRemainingMs={clocks.w}
-                    capturedPieces={captures.w}
-                    materialDelta={material.delta}
-                    isThinking={activeThinking.side === 'w'}
-                    thoughtText={latestWhiteThought}
-                  />
+            {/* Game Result Banner */}
+            {liveGame.result && (
+              <div
+                className="card-panel"
+                style={{
+                  width: '100%',
+                  maxWidth: '540px',
+                  textAlign: 'center',
+                  padding: '14px',
+                  background:
+                    liveGame.result.winner === 'draw'
+                      ? 'rgba(100, 116, 139, 0.2)'
+                      : 'rgba(124, 58, 237, 0.2)',
+                  borderColor:
+                    liveGame.result.winner === 'draw'
+                      ? 'var(--text-muted)'
+                      : 'var(--neon-violet)',
+                }}
+              >
+                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '16px', color: '#ffffff' }}>
+                  {liveGame.result.description}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Benchmark ratings and PGN records updated.
+                </div>
+              </div>
+            )}
+          </section>
 
-                  {/* Game Result Banner */}
-                  {gameResult && (
-                    <div
-                      className="card-panel"
-                      style={{
-                        width: '100%',
-                        maxWidth: '540px',
-                        textAlign: 'center',
-                        padding: '14px',
-                        background:
-                          gameResult.winner === 'draw'
-                            ? 'rgba(100, 116, 139, 0.2)'
-                            : 'rgba(124, 58, 237, 0.2)',
-                        borderColor:
-                          gameResult.winner === 'draw'
-                            ? 'var(--text-muted)'
-                            : 'var(--neon-violet)',
-                      }}
-                    >
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '16px', color: '#ffffff' }}>
-                        {gameResult.description}
-                      </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                        Benchmark ratings and PGN records updated.
-                      </div>
-                    </div>
-                  )}
-                </section>
-
-                {/* Right Column: Live Neural Feed (Tool Calls & Reasoning) */}
-                <aside>
-                  <NeuralFeed
-                    logs={allLogs}
-                    activeThinking={activeThinking}
-                    whiteModel={whiteModel}
-                    blackModel={blackModel}
-                  />
-                </aside>
-              </>
-            );
-          })()}
+          {/* Right Column: Live Neural Feed (Tool Calls & Streaming Reasoning) */}
+          <aside>
+            <NeuralFeed
+              logs={allLogs}
+              activeThinking={activeThinking}
+              whiteModel={liveGame.whiteModel || whiteModel}
+              blackModel={liveGame.blackModel || blackModel}
+            />
+          </aside>
         </main>
       )}
 
@@ -614,4 +545,5 @@ export const App: React.FC = () => {
     </div>
   );
 };
+
 export default App;
