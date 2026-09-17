@@ -25,20 +25,22 @@ export const NeuralFeed: React.FC<NeuralFeedProps> = ({
   const whiteScrollRef = useRef<HTMLDivElement>(null);
   const blackScrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto scroll
+  // Auto scroll to top on new moves or streaming tokens so newest updates are immediately visible
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    if (whiteScrollRef.current) whiteScrollRef.current.scrollTop = whiteScrollRef.current.scrollHeight;
-    if (blackScrollRef.current) blackScrollRef.current.scrollTop = blackScrollRef.current.scrollHeight;
-  }, [logs.length, activeThinking?.thoughtText]);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    if (whiteScrollRef.current) whiteScrollRef.current.scrollTop = 0;
+    if (blackScrollRef.current) blackScrollRef.current.scrollTop = 0;
+  }, [logs.length, activeThinking?.side]);
 
   const toggleExpand = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedThinkingIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const whiteLogs = logs.filter((l) => l.turn === 'w');
-  const blackLogs = logs.filter((l) => l.turn === 'b');
+  // Reverse feeds so newest moves/chats appear at the top
+  const whiteLogs = [...logs].filter((l) => l.turn === 'w').reverse();
+  const blackLogs = [...logs].filter((l) => l.turn === 'b').reverse();
+  const allLogsReversed = [...logs].reverse();
 
   const renderLogCard = (log: NeuralLogEntry) => {
     const hasIllegal = log.illegalAttempts > 0;
@@ -353,7 +355,7 @@ export const NeuralFeed: React.FC<NeuralFeedProps> = ({
         <div className="neural-feed-scroll" ref={scrollRef}>
           {renderStreamingBox(feedTab === 'white' ? 'w' : feedTab === 'black' ? 'b' : (activeThinking?.side || 'w'))}
 
-          {((feedTab === 'white' ? whiteLogs : feedTab === 'black' ? blackLogs : logs).length === 0) ? (
+          {((feedTab === 'white' ? whiteLogs : feedTab === 'black' ? blackLogs : allLogsReversed).length === 0) ? (
             <div
               style={{
                 display: 'flex',
@@ -374,7 +376,7 @@ export const NeuralFeed: React.FC<NeuralFeedProps> = ({
               </div>
             </div>
           ) : (
-            (feedTab === 'white' ? whiteLogs : feedTab === 'black' ? blackLogs : logs).map(renderLogCard)
+            (feedTab === 'white' ? whiteLogs : feedTab === 'black' ? blackLogs : allLogsReversed).map(renderLogCard)
           )}
         </div>
       )}
