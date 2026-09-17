@@ -4,6 +4,7 @@ import { matchesRouter } from './routes/matches';
 import { tournamentsRouter } from './routes/tournaments';
 import { leaderboardRouter } from './routes/leaderboard';
 import { gameRouter } from './routes/game';
+import { sseHub } from './services/sseHub';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -36,9 +37,21 @@ app.use('/api/matches', matchesRouter);
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api/models', leaderboardRouter);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`⚡ AI Showdown Backend running at http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
 });
+
+// Clean and instant shutdown on SIGINT / SIGTERM / Ctrl+C
+const handleShutdown = () => {
+  sseHub.closeAll();
+  server.close(() => {
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(0), 300).unref();
+};
+
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);
 
 export default app;

@@ -24,6 +24,20 @@ export class SSEHub {
     this.heartbeatInterval = setInterval(() => {
       this.broadcast('ping', { timestamp: Date.now() });
     }, 15000);
+    this.heartbeatInterval.unref();
+  }
+
+  public closeAll(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    for (const client of this.clients) {
+      try {
+        client.end();
+      } catch {}
+    }
+    this.clients.clear();
   }
 
   public addClient(res: Response, initialData?: any): void {
