@@ -1,0 +1,509 @@
+{
+  "matches": [
+    {
+      "id": "test_match_1789655596483",
+      "tournamentId": "test_tourney_001",
+      "roundNumber": 1,
+      "matchIndex": 0,
+      "whiteModelId": "ag-gemini-38-flash",
+      "whiteModelName": "Gemini 3.8 Flash",
+      "blackModelId": "ag-gpt-oss-120b",
+      "blackModelName": "GPT-OSS 120B",
+      "winner": "w",
+      "reason": "checkmate",
+      "movesCount": 24,
+      "durationMs": 12000,
+      "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 ... 1-0",
+      "finalFen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4",
+      "timeControl": {
+        "name": "Blitz 3+2",
+        "baseSeconds": 180,
+        "incrementSeconds": 2
+      },
+      "telemetry": {
+        "whiteIllegalMoves": 0,
+        "blackIllegalMoves": 0,
+        "whiteAvgLatencyMs": 0,
+        "blackAvgLatencyMs": 0,
+        "whiteToolCallsCount": 0,
+        "blackToolCallsCount": 0
+      },
+      "eloChange": {
+        "whiteDelta": 16,
+        "blackDelta": -16,
+        "whiteBefore": 2580,
+        "blackBefore": 2540,
+        "whiteAfter": 2596,
+        "blackAfter": 2524,
+        "kFactorWhite": 40,
+        "kFactorBlack": 40
+      },
+      "createdAt": 1789655596484
+    },
+    {
+      "id": "api_test_01",
+      "tournamentId": "tourney_99",
+      "whiteModelId": "cx-gpt-6-astra",
+      "whiteModelName": "GPT 6.0 Astra",
+      "blackModelId": "cx-gpt-56-sol",
+      "blackModelName": "GPT 5.6 Sol",
+      "winner": "w",
+      "reason": "checkmate",
+      "movesCount": 30,
+      "durationMs": 15000,
+      "pgn": "1. e4 e5 1-0",
+      "finalFen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      "timeControl": {
+        "name": "Blitz",
+        "baseSeconds": 180,
+        "incrementSeconds": 2
+      },
+      "telemetry": {
+        "whiteIllegalMoves": 0,
+        "blackIllegalMoves": 0,
+        "whiteAvgLatencyMs": 0,
+        "blackAvgLatencyMs": 0,
+        "whiteToolCallsCount": 0,
+        "blackToolCallsCount": 0
+      },
+      "eloChange": {
+        "whiteDelta": 14,
+        "blackDelta": -14,
+        "whiteBefore": 2750,
+        "blackBefore": 2680,
+        "whiteAfter": 2764,
+        "blackAfter": 2666,
+        "kFactorWhite": 40,
+        "kFactorBlack": 40
+      },
+      "createdAt": 1789655645856
+    }
+  ],
+  "tournaments": [],
+  "models": {
+    "cx-gpt-6-astra": {
+      "modelId": "cx-gpt-6-astra",
+      "modelName": "GPT 6.0 Astra",
+      "provider": "openai",
+      "elo": 2764,
+      "peakElo": 2764,
+      "gamesPlayed": 1,
+      "wins": 1,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2750,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        },
+        {
+          "elo": 2764,
+          "matchId": "api_test_01",
+          "delta": 14,
+          "timestamp": 1789655645856
+        }
+      ]
+    },
+    "cx-gpt-56-sol": {
+      "modelId": "cx-gpt-56-sol",
+      "modelName": "GPT 5.6 Sol",
+      "provider": "openai",
+      "elo": 2666,
+      "peakElo": 2680,
+      "gamesPlayed": 1,
+      "wins": 0,
+      "losses": 1,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2680,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        },
+        {
+          "elo": 2666,
+          "matchId": "api_test_01",
+          "delta": -14,
+          "timestamp": 1789655645856
+        }
+      ]
+    },
+    "cx-gpt-56-terra": {
+      "modelId": "cx-gpt-56-terra",
+      "modelName": "GPT 5.6 Terra",
+      "provider": "openai",
+      "elo": 2660,
+      "peakElo": 2660,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2660,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    },
+    "cx-gpt-56-luna": {
+      "modelId": "cx-gpt-56-luna",
+      "modelName": "GPT 5.6 Luna",
+      "provider": "openai",
+      "elo": 2650,
+      "peakElo": 2650,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2650,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    },
+    "cx-gpt-55": {
+      "modelId": "cx-gpt-55",
+      "modelName": "GPT 5.5",
+      "provider": "openai",
+      "elo": 2600,
+      "peakElo": 2600,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2600,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    },
+    "cx-gpt-54": {
+      "modelId": "cx-gpt-54",
+      "modelName": "GPT 5.4",
+      "provider": "openai",
+      "elo": 2550,
+      "peakElo": 2550,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2550,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    },
+    "cx-gpt-54-mini": {
+      "modelId": "cx-gpt-54-mini",
+      "modelName": "GPT 5.4 Mini",
+      "provider": "openai",
+      "elo": 2480,
+      "peakElo": 2480,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2480,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    },
+    "cx-gpt-53-codex-spark": {
+      "modelId": "cx-gpt-53-codex-spark",
+      "modelName": "GPT 5.3 Codex Spark",
+      "provider": "openai",
+      "elo": 2520,
+      "peakElo": 2520,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2520,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    },
+    "ag-gemini-38-flash": {
+      "modelId": "ag-gemini-38-flash",
+      "modelName": "Gemini 3.8 Flash",
+      "provider": "openai",
+      "elo": 2596,
+      "peakElo": 2596,
+      "gamesPlayed": 1,
+      "wins": 1,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2580,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        },
+        {
+          "elo": 2596,
+          "matchId": "test_match_1789655596483",
+          "delta": 16,
+          "timestamp": 1789655596484
+        }
+      ]
+    },
+    "ag-gemini-38-flash-medium": {
+      "modelId": "ag-gemini-38-flash-medium",
+      "modelName": "Gemini 3.8 Flash (Medium)",
+      "provider": "openai",
+      "elo": 2600,
+      "peakElo": 2600,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2600,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    },
+    "ag-claude-opus-46": {
+      "modelId": "ag-claude-opus-46",
+      "modelName": "Claude Opus 4.6 (Thinking)",
+      "provider": "openai",
+      "elo": 2620,
+      "peakElo": 2620,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2620,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    },
+    "ag-claude-sonnet-46": {
+      "modelId": "ag-claude-sonnet-46",
+      "modelName": "Claude Sonnet 4.6",
+      "provider": "openai",
+      "elo": 2560,
+      "peakElo": 2560,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2560,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    },
+    "ag-gpt-oss-120b": {
+      "modelId": "ag-gpt-oss-120b",
+      "modelName": "GPT-OSS 120B (Medium)",
+      "provider": "openai",
+      "elo": 2524,
+      "peakElo": 2540,
+      "gamesPlayed": 1,
+      "wins": 0,
+      "losses": 1,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2540,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        },
+        {
+          "elo": 2524,
+          "matchId": "test_match_1789655596483",
+          "delta": -16,
+          "timestamp": 1789655596484
+        }
+      ]
+    },
+    "ag-gemini-37-flash-medium": {
+      "modelId": "ag-gemini-37-flash-medium",
+      "modelName": "Gemini 3.7 Flash (Medium)",
+      "provider": "openai",
+      "elo": 2510,
+      "peakElo": 2510,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2510,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    },
+    "ag-gemini-36-flash-medium": {
+      "modelId": "ag-gemini-36-flash-medium",
+      "modelName": "Gemini 3.6 Flash (Medium)",
+      "provider": "openai",
+      "elo": 2460,
+      "peakElo": 2460,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2460,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    },
+    "ag-gemini-3-flash": {
+      "modelId": "ag-gemini-3-flash",
+      "modelName": "Gemini 3 Flash",
+      "provider": "openai",
+      "elo": 2420,
+      "peakElo": 2420,
+      "gamesPlayed": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
+      "totalLatencyMs": 0,
+      "totalToolCalls": 0,
+      "forfeits": 0,
+      "provisional": true,
+      "history": [
+        {
+          "elo": 2420,
+          "matchId": "initial",
+          "delta": 0,
+          "timestamp": 1789655661360
+        }
+      ]
+    }
+  }
+}

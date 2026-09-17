@@ -12,6 +12,7 @@ import { GameStateStore } from './services/GameStateStore';
 import { GameOrchestrator, SpeedMode } from './services/GameOrchestrator';
 import { storageService } from './services/storageService';
 import { audioService } from './services/audioService';
+import { apiService } from './services/apiService';
 import { TournamentManager } from './services/tournamentManager';
 import { DEFAULT_MODELS } from './services/defaultModels';
 import {
@@ -166,11 +167,83 @@ export const App: React.FC = () => {
     };
   }, [store]);
 
+  // Sync leaderboard from backend on mount
+  useEffect(() => {
+    apiService.getLeaderboard().then((backendMetrics) => {
+      if (backendMetrics && backendMetrics.length > 0) {
+        const mapped: Record<string, BenchmarkMetrics> = {};
+        backendMetrics.forEach((m) => {
+          mapped[m.modelId] = m;
+        });
+        setMetrics(mapped);
+      }
+    });
+  }, []);
+
   // Handle Game Finished Callback
   useEffect(() => {
     orchestrator.setGameFinishedCallback((result: GameResult) => {
-      // Refresh benchmark metrics from storage
-      setMetrics(storageService.getBenchmarkMetrics());
+      const matchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const tournamentId = tournament?.id || null;
+      const tourneyInfo = currentTourneyMatchRef.current;
+
+      const neuralLogs = store.getNeuralLogs();
+      const whiteLogs = neuralLogs.filter((l) => l.turn === 'w');
+      const blackLogs = neuralLogs.filter((l) => l.turn === 'b');
+      const whiteAvgLatency =
+        whiteLogs.length > 0
+          ? Math.round(whiteLogs.reduce((acc, l) => acc + l.totalLatencyMs, 0) / whiteLogs.length)
+          : 0;
+      const blackAvgLatency =
+        blackLogs.length > 0
+          ? Math.round(blackLogs.reduce((acc, l) => acc + l.totalLatencyMs, 0) / blackLogs.length)
+          : 0;
+      const whiteToolCalls = whiteLogs.reduce((acc, l) => acc + l.toolCalls.length, 0);
+      const blackToolCalls = blackLogs.reduce((acc, l) => acc + l.toolCalls.length, 0);
+
+      // Record match to Express backend with advanced ELO calculation
+      apiService
+        .recordMatch({
+          matchId,
+          tournamentId,
+          roundNumber: tourneyInfo ? tourneyInfo.roundIndex + 1 : undefined,
+          matchIndex: tourneyInfo ? tourneyInfo.matchIndex : undefined,
+          whiteModelId: whiteModel.id,
+          whiteModelName: whiteModel.name,
+          blackModelId: blackModel.id,
+          blackModelName: blackModel.name,
+          winner: result.winner,
+          reason: result.reason,
+          movesCount: store.getMoves().length,
+          durationMs: 0,
+          pgn: store.exportPGN(whiteModel.name, blackModel.name),
+          finalFen: store.getFEN(),
+          timeControl,
+          telemetry: {
+            whiteIllegalMoves: store.getIllegalAttempts('w'),
+            blackIllegalMoves: store.getIllegalAttempts('b'),
+            whiteAvgLatencyMs: whiteAvgLatency,
+            blackAvgLatencyMs: blackAvgLatency,
+            whiteToolCallsCount: whiteToolCalls,
+            blackToolCallsCount: blackToolCalls,
+            whiteForfeit: result.winner === 'b' && result.reason === 'resignation',
+            blackForfeit: result.winner === 'w' && result.reason === 'resignation',
+          },
+        })
+        .then(() => {
+          // Refresh benchmark metrics from backend
+          apiService.getLeaderboard().then((backendMetrics) => {
+            if (backendMetrics && backendMetrics.length > 0) {
+              const mapped: Record<string, BenchmarkMetrics> = {};
+              backendMetrics.forEach((m) => {
+                mapped[m.modelId] = m;
+              });
+              setMetrics(mapped);
+            } else {
+              setMetrics(storageService.getBenchmarkMetrics());
+            }
+          });
+        });
 
       // If playing a tournament match, update tournament bracket
       if (tournament && currentTourneyMatchRef.current) {
@@ -183,6 +256,7 @@ export const App: React.FC = () => {
         );
         setTournament(updatedTourney);
         storageService.saveTournament(updatedTourney);
+        apiService.saveTournament(updatedTourney);
         currentTourneyMatchRef.current = null;
 
         // Auto-run next match after 2.5s delay if auto-running is enabled
@@ -198,7 +272,7 @@ export const App: React.FC = () => {
         }
       }
     });
-  }, [tournament, isAutoRunningTournament]);
+  }, [tournament, isAutoRunningTournament, whiteModel, blackModel, timeControl]);
 
   // Actions
   const handleStartGame = () => {
@@ -512,6 +586,16 @@ export const App: React.FC = () => {
           onResetStats={() => {
             storageService.resetAllData();
             setMetrics(storageService.getBenchmarkMetrics());
+          }}
+          onRecalculateElo={async () => {
+            const res = await apiService.recalculateElo();
+            if (res?.models && Array.isArray(res.models)) {
+              const mapped: Record<string, BenchmarkMetrics> = {};
+              res.models.forEach((m: BenchmarkMetrics) => {
+                mapped[m.modelId] = m;
+              });
+              setMetrics(mapped);
+            }
           }}
         />
       )}

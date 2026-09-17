@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { BarChart3, Download, RotateCcw, ArrowUpDown } from 'lucide-react';
+import { BarChart3, Download, RotateCcw, ArrowUpDown, Calculator } from 'lucide-react';
 import { BenchmarkMetrics } from '../types';
 
 interface LeaderboardViewProps {
   metrics: Record<string, BenchmarkMetrics>;
   onResetStats: () => void;
+  onRecalculateElo?: () => void;
 }
 
 type SortKey = 'elo' | 'wins' | 'gamesPlayed' | 'illegalRate' | 'avgLatency';
@@ -12,6 +13,7 @@ type SortKey = 'elo' | 'wins' | 'gamesPlayed' | 'illegalRate' | 'avgLatency';
 export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   metrics,
   onResetStats,
+  onRecalculateElo,
 }) => {
   const [sortKey, setSortKey] = useState<SortKey>('elo');
   const [sortAsc, setSortAsc] = useState<boolean>(false);
@@ -74,7 +76,13 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           <BarChart3 size={18} color="var(--neon-cyan)" />
           <span>LLM Intelligence & Chess Benchmark</span>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {onRecalculateElo && (
+            <button className="btn btn-secondary" onClick={onRecalculateElo} title="Recalculate all historical ELO with dynamic K-factor">
+              <Calculator size={14} color="var(--neon-cyan)" />
+              <span>Recalculate ELO</span>
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={handleExportJSON}>
             <Download size={14} />
             <span>Export JSON</span>
@@ -155,7 +163,25 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                     </span>
                   </td>
                   <td>
-                    <span className="elo-badge">{m.elo}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span className="elo-badge">{m.elo}</span>
+                      {m.gamesPlayed < 10 && (
+                        <span
+                          title="Provisional rating (< 10 matches). Dynamic K=40 rapid calibration."
+                          style={{
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                            color: '#fbbf24',
+                            cursor: 'help',
+                          }}
+                        >
+                          PROV
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
                     <span style={{ color: '#34d399' }}>{m.wins}W</span> /{' '}

@@ -80,12 +80,39 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
+Running `npm run dev` concurrently boots:
+- 🌐 **Vite Client**: `http://localhost:5173/`
+- ⚡ **Express API Backend**: `http://localhost:3001/` (with `/api` proxy auto-configured)
+
 ### Building for Production
 
 ```bash
 npm run build
 npm run preview
 ```
+
+---
+
+## ⚡ Express Backend & Persistent Match/Tournament API
+
+AI Showdown includes a dedicated Express + TypeScript backend storing match telemetry, tournament brackets, and recalculating chess ELO ratings.
+
+### Endpoints
+- `POST /api/matches`: Records a completed duel or tournament match with `matchId`, `tournamentId`, full PGN, FEN, and telemetry. Automatically computes new dynamic ELO ratings.
+- `GET /api/matches`: Query match history with optional `?tournamentId=` or `?modelId=` filters.
+- `GET /api/matches/:id`: Retrieve single match details and full move records.
+- `POST /api/tournaments` & `PUT /api/tournaments/:id`: Save and update tournament progression, brackets, and standings.
+- `GET /api/tournaments`: List all historical tournaments.
+- `GET /api/models/leaderboard`: Fetch live benchmark standings, win/draw/loss counts, and provisional badges.
+- `POST /api/models/recalculate-elo`: Recalculates the entire match history from baseline seeds using the dynamic K-factor engine.
+
+### 🎯 Enhanced ELO Rating Engine
+- **Dynamic K-Factor**:
+  - **Provisional ($< 10$ matches)**: $K = 40$ for rapid calibration.
+  - **Established ($10 - 29$ matches)**: $K = 24$.
+  - **Master Bracket ($\ge 30$ matches or rating $> 2400$)**: $K = 16$.
+- **White First-Move Tempo Correction**: Incorporates White's standard chess first-move advantage equity ($\Delta_{\text{tempo}} \approx +35$ Elo) into the logistic expectation curve.
+- **Recovery Penalties**: Deducts points from models requiring recovery assists after repeated illegal attempts.
 
 ---
 
@@ -96,10 +123,12 @@ AI Showdown is preconfigured to work with local proxy servers and official APIs:
 - **Local Proxy Endpoint**: Defaults to `http://localhost:20128/v1` (no API key required).
 - **Supported Models Out of the Box**:
   - `ag/gemini-3.8-flash`
+  - `ag/gemini-3.8-flash-medium`
   - `ag/claude-opus-4-6-thinking`
   - `ag/claude-sonnet-4-6`
   - `ag/gpt-oss-120b-medium`
   - `ag/gemini-3.7-flash-medium`
+  - `ag/gemini-3.6-flash-medium`
   - `ag/gemini-3-flash`
   - `cx/gpt-6-astra`
   - `cx/gpt-5.6-sol`
@@ -107,6 +136,7 @@ AI Showdown is preconfigured to work with local proxy servers and official APIs:
   - `cx/gpt-5.6-luna`
   - `cx/gpt-5.5`
   - `cx/gpt-5.4`
+  - `cx/gpt-5.4-mini`
   - `cx/gpt-5.3-codex-spark`
 - **Custom Endpoints & Keys**: Go to the **Settings** tab in the top navigation to add your custom API keys, custom model identifiers, and custom base URLs.
 
@@ -116,7 +146,19 @@ AI Showdown is preconfigured to work with local proxy servers and official APIs:
 
 ```
 ai-showdown/
-├── src/
+├── server/                          # Express Backend Service (:3001)
+│   ├── index.ts                     # Express server & route bootstrap
+│   ├── types.ts                     # Match, tournament, and DB schemas
+│   ├── services/
+│   │   ├── eloEngine.ts             # Dynamic K-factor & White tempo ELO engine
+│   │   └── dbStore.ts               # Atomic JSON file database store
+│   ├── routes/
+│   │   ├── matches.ts               # Match recording & history endpoints
+│   │   ├── tournaments.ts           # Tournament persistence endpoints
+│   │   └── leaderboard.ts           # Benchmark leaderboard & ELO recalculation
+│   └── data/
+│       └── showdown-db.json         # Persistent database file
+├── src/                             # React Frontend (:5173)
 │   ├── components/
 │   │   ├── ChessBoard.tsx           # Interactive board with SVG pieces & move highlights
 │   │   ├── PlayerPanel.tsx          # Player card with clocks, captures & thinking badge
@@ -126,18 +168,16 @@ ai-showdown/
 │   │   ├── SettingsView.tsx         # API keys & model registry manager
 │   │   └── PromptInspectorModal.tsx # Detailed telemetry & tool call inspector
 │   ├── services/
+│   │   ├── apiService.ts            # Client API connector with offline fallback
 │   │   ├── GameStateStore.ts        # Reactive state store & chess rule engine
 │   │   ├── GameOrchestrator.ts      # Agent turn loop, fallback recovery & clock ticks
 │   │   ├── tournamentManager.ts     # Tournament bracket generation & advancement
 │   │   ├── defaultModels.ts         # Preset registry of benchmark models
 │   │   ├── chessTools.ts            # OpenAI-compatible function calling schemas
-│   │   └── providers/
-│   │       ├── OpenAIProvider.ts    # SSE streaming & tool calling provider
-│   │       ├── AnthropicProvider.ts # Anthropic Messages API provider
-│   │       └── SimulatedProvider.ts # Offline simulation provider
+│   │   └── storageService.ts        # Local storage caching & persistence
 │   ├── types.ts                     # TypeScript interfaces & domain models
 │   ├── index.css                    # Esports dark theme & design tokens
-│   ├── App.tsx                      # Root arena layout and routing
+│   ├── App.tsx                      # Root arena layout, state wiring & routing
 │   └── main.tsx                     # React entry point
 ├── package.json
 └── vite.config.ts
