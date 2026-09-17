@@ -17,15 +17,15 @@ export function buildSpellDraftSystemPrompt(params: SystemPromptParams): string 
 - Opponent's Spells: [${oppSpellNames || 'None remaining'}]
 
 ⚡ DUAL ACTION SYSTEM (CAST SPELL + MAKE MOVE):
-You possess mystical spells that bend chess reality. You can cast a spell using the "cast_spell" tool, AND you MUST make a legal chess move using the "make_move" tool!
+You possess mystical spells that bend chess reality. You can cast a spell directly by including "spell_id" in your "make_move" call, OR by invoking the "cast_spell" tool!
 Available Spell Arsenal:
-1. "swap_pawns": Instantly swap the positions of two of your active pawns (arguments: sq1, sq2 or omit to auto-target).
-2. "catapult_knight": Launch an active Knight directly across into ranks 4, 5, or 6 to create sudden forks or checkmate attacks! (arguments: sq1, sq2 or omit to auto-target).
-3. "frost_freeze": Glacial freeze an enemy piece. That unit is paralyzed and CANNOT MOVE on the opponent's next turn! (arguments: sq1 = enemy square or omit to auto-freeze highest value unit).
+1. "swap_pawns": Instantly swap the positions of two of your active pawns (arguments: spell_sq1, spell_sq2 or omit to auto-target).
+2. "catapult_knight": Launch an active Knight directly across into ranks 4, 5, or 6 to create sudden forks or checkmate attacks! (arguments: spell_sq1, spell_sq2 or omit to auto-target).
+3. "frost_freeze": Glacial freeze an enemy piece. That unit is paralyzed and CANNOT MOVE on the opponent's next turn! (arguments: spell_sq1 = enemy square or omit to auto-freeze highest value unit).
 4. "resurrection": Revive a captured friendly pawn back onto an open back-rank square!
 
 🎯 STRATEGIC DIRECTIVE:
-Spells are decisive weapons! If you have a spell available and it provides tactical advantage or disrupts enemy plans, INVOKE "cast_spell" to cast it!`;
+Spells win matches! While you hold spells, cast them aggressively to seize initiative. Include "spell_id" in your "make_move" call or invoke "cast_spell"!`;
 }
 
 export function buildSpellDraftTurnPrompt(params: TurnPromptParams): string {
@@ -33,9 +33,13 @@ export function buildSpellDraftTurnPrompt(params: TurnPromptParams): string {
   const spellsLeft = params.spells || [];
   let spellSection = '';
   if (spellsLeft.length > 0) {
-    spellSection = `\n🪄 BATTLEMAGE SPELL ACTION (ACTIVE INVENTORY):\nYou hold ${spellsLeft.length} magic spell(s) in hand: [${spellsLeft.join(', ')}].
-⚠️ DO NOT PLAY A NORMAL CHESS MOVE WITHOUT CONSIDERING YOUR SPELLS!
-Cast your spell now using tool "cast_spell" with {"spell_id": "${spellsLeft[0]}"} to warp the board, freeze an enemy, or catapult a knight!`;
+    spellSection = `\n🪄 BATTLEMAGE SPELL ACTION (ACTIVE INVENTORY):
+You hold ${spellsLeft.length} magic spell(s) in hand: [${spellsLeft.join(', ')}].
+⚡ CAST A SPELL THIS TURN: In your "make_move" call, pass "spell_id": "${spellsLeft[0]}" (and optional "spell_sq1" / "spell_sq2"), or invoke "cast_spell".
+- "frost_freeze": freeze enemy piece in place (e.g. spell_sq1: "e7", "d7", "c6")
+- "catapult_knight": catapult knight into attack (e.g. spell_sq1: "b1", spell_sq2: "d5")
+- "swap_pawns": swap two friendly pawns
+- "resurrection": revive captured pawn`;
   } else {
     spellSection = `\n🪄 SPELLS: All spell cards have been consumed. Play pure tactical chess.`;
   }
@@ -53,5 +57,5 @@ ${spellSection}
 Available Legal Moves (${params.legalMoves.length}):
 ${params.legalMoves.join(', ')}
 
-${spellsLeft.length > 0 ? `👉 PRIORITY ACTION: Invoke "cast_spell" with your chosen spell_id, then invoke "make_move".` : `Invoke "make_move" with your chosen move.`}`;
+${spellsLeft.length > 0 ? `👉 PRIORITY ACTION: Execute "make_move" with your chosen move AND "spell_id": "${spellsLeft[0]}" (e.g. {"move": "${params.legalMoves[0]}", "spell_id": "${spellsLeft[0]}"}), or invoke "cast_spell".` : `Invoke "make_move" with your chosen move.`}`;
 }
