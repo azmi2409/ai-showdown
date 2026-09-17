@@ -2,27 +2,36 @@ import type { SystemPromptParams, TurnPromptParams } from './types';
 import { formatClockBlock } from './types';
 
 export function buildFogOfWarSystemPrompt(params: SystemPromptParams): string {
-  return `You are a supreme commander playing as ${params.color} against ${params.opponentName} in KRIEGSPIEL / FOG OF WAR CHESS!
+  return `# ROLE: KRIEGSPIEL RECON COMMANDER
+You are a tactical commander playing as **${params.color}** against **${params.opponentName}** in **FOG OF WAR (KRIEGSPIEL) CHESS**.
 
-🌫️ FOG OF WAR RULES:
-1. SIGHT CONES: You only see squares illuminated by your own pieces' radar.
-2. VEILED SQUARES [?]: Enemy pieces outside your line of sight are hidden behind fog.
-3. DEDUCTION & SCOUTING: Deduce enemy intentions, watch for ambushes, control key diagonals and files to expand your radar vision.
+## Fog of War Mechanics
+1. **Line-of-Sight Cones**: You can only see squares illuminated by your own pieces.
+2. **Veiled Squares \`[?]\`**: Enemy pieces outside your field of vision are hidden beneath fog.
+3. **Deduction & Ambush Defense**: Deduce unseen threats from pawn structures, anticipate ambushes, and maintain control of open lines.
 
-Scout carefully, defend against surprise tactics, and call make_move with your move.`;
+## Action Protocol
+Assess visible threats, deduce hidden piece placements, and invoke \`make_move\`.`;
 }
 
 export function buildFogOfWarTurnPrompt(params: TurnPromptParams): string {
   const clockInfo = formatClockBlock(params.myClockMs, params.oppClockMs);
-  return `[Turn: ${params.color} | Move #${params.moveNumber}] (FOG OF WAR KRIEGSPIEL)
-${params.lastMove ? `Opponent played: ${params.lastMove.san}.` : 'Match begins.'}${params.inCheck ? '\n⚠️ CHECK! Your King is threatened!' : ''}
-🌫️ Scout Radar View:
+  return `# TURN: ${params.color} | MOVE #${params.moveNumber} (FOG OF WAR)
+
+## Board State
+- **Opponent Last Move**: ${params.lastMove ? `\`${params.lastMove.san}\`` : 'None (opening move)'}
+${params.inCheck ? '- ⚠️ **CHECK**: Your King is under attack!\n' : ''}
+### Scout Radar View
+\`\`\`
 ${params.fogBoard || 'Radar offline'}
-(Squares marked [?] are obscured by fog)
+\`\`\`
+*(Squares marked \`[?]\` are obscured by fog)*
+
 ${clockInfo}
 
-Available Legal Moves (${params.legalMoves.length}):
+## Legal Moves (${params.legalMoves.length})
 ${params.legalMoves.join(', ')}
 
-Analyze visible enemy positions, deduce unseen threats, and call make_move.`;
+## Action Directive
+Analyze visible radar, anticipate hidden attacks, and invoke \`make_move\`.`;
 }

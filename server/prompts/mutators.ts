@@ -6,41 +6,48 @@ export function buildMutatorsSystemPrompt(params: SystemPromptParams): string {
   const myModDesc = (params.myModifiers || [])
     .map((id) => AVAILABLE_MODIFIERS.find((m) => m.id === id))
     .filter(Boolean)
-    .map((m) => `   - ⭐ ${m!.name}: ${m!.description}`)
+    .map((m) => `- ⭐ **${m!.name}**: ${m!.description}`)
     .join('\n');
   const oppModDesc = (params.oppModifiers || [])
     .map((id) => AVAILABLE_MODIFIERS.find((m) => m.id === id))
     .filter(Boolean)
-    .map((m) => `   - ⚡ Enemy ${m!.name}: ${m!.description}`)
+    .map((m) => `- ⚡ **Enemy ${m!.name}**: ${m!.description}`)
     .join('\n');
 
-  return `You are a Grandmaster playing as ${params.color} against ${params.opponentName} in CHAOS MUTATOR AUTO-BATTLER CHESS!
+  return `# ROLE: CHAOS MUTATORS BATTLEMAGE
+You are a Grandmaster playing as **${params.color}** against **${params.opponentName}** in **CHAOS MUTATOR AUTO-BATTLER CHESS**.
 
-🎲 YOUR DRAFTED MUTATOR CARDS:
-${myModDesc || '   - None'}
+## Active Mutator Cards
+### Your Mutators
+${myModDesc || '- None'}
 
-⚡ OPPONENT'S MUTATOR CARDS:
-${oppModDesc || '   - None'}
+### Opponent Mutators
+${oppModDesc || '- None'}
 
-ACTIVELY EXPLOIT YOUR POWERS:
-- Quantum Portals: Squares d4 and e5 are linked. Moving to d4 teleports you to e5 (if empty), and vice versa!
-- Bounty Hunter: Every capture grants you +15 seconds on your digital clock!
-- Exploding Rooks: When your Rook captures, it sends a shockwave destroying adjacent enemy pawns!
-- Vampire Queen: When your Queen captures, it resurrects a friendly pawn!
+## Portal & Modifier Rules
+- **Quantum Portals**: Squares d4 and e5 are linked. Moving to d4 teleports you to e5 (if empty), and vice versa!
+- **Bounty Hunter**: Every capture awards +15 seconds on your digital clock.
+- **Exploding Rooks**: Rook captures create a shockwave destroying adjacent enemy pawns.
+- **Vampire Queen**: Queen captures resurrect a friendly pawn onto your back rank.
 
-Leverage your mutator advantages aggressively. Call make_move with your chosen move.`;
+## Action Protocol
+Leverage your mutator powers aggressively and invoke tool \`make_move\`.`;
 }
 
 export function buildMutatorsTurnPrompt(params: TurnPromptParams): string {
   const clockInfo = formatClockBlock(params.myClockMs, params.oppClockMs);
-  return `[Turn: ${params.color} | Move #${params.moveNumber}] (CHAOS MUTATORS CHESS)
-${params.lastMove ? `Opponent played: ${params.lastMove.san}.` : 'Match begins.'}${params.inCheck ? '\n⚠️ CHECK! Defend your King.' : ''}
-Position FEN: ${params.fen}
-🌀 Quantum Portals: Active on ${params.portalSquares?.join(' <-> ') || 'd4 <-> e5'}
+  return `# TURN: ${params.color} | MOVE #${params.moveNumber} (CHAOS MUTATORS)
+
+## Board State
+- **Position (FEN)**: \`${params.fen}\`
+- **Opponent Last Move**: ${params.lastMove ? `\`${params.lastMove.san}\`` : 'None (opening move)'}
+- **Quantum Portals**: Active on \`${params.portalSquares?.join(' <-> ') || 'd4 <-> e5'}\`
+${params.inCheck ? '- ⚠️ **CHECK**: Your King is under attack! Defend immediately.\n' : ''}
 ${clockInfo}
 
-Available Legal Moves (${params.legalMoves.length}):
+## Legal Moves (${params.legalMoves.length})
 ${params.legalMoves.join(', ')}
 
-Exploit your mutators and call make_move with your move and reasoning.`;
+## Action Directive
+Exploit your mutators and invoke \`make_move\` with your chosen move and reasoning.`;
 }

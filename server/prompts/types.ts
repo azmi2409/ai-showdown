@@ -52,12 +52,12 @@ export function formatClockBlock(myClockMs: number, oppClockMs: number): string 
 
   let alert = '';
   if (myTotalSec <= 10) {
-    alert = '\n🚨 CRITICAL TIME SCRAMBLE (<10s): Move immediately to avoid losing on time!';
+    alert = '\n- 🚨 **CRITICAL TIME SCRAMBLE (<10s)**: Move immediately to avoid losing on time!';
   } else if (myTotalSec <= 30) {
-    alert = '\n⏱️ TIME PRESSURE WARNING (<30s): Keep it simple and move fast.';
+    alert = '\n- ⏱️ **TIME PRESSURE WARNING (<30s)**: Keep it simple and move fast.';
   }
 
-  return `Chess Clocks:
-- Your remaining time: ${myFormatted}
-- Opponent remaining time: ${oppFormatted} (${deltaText})${alert}`;
+  return `## Time Control & Clocks
+- **Your Remaining Time**: ${myFormatted}
+- **Opponent Remaining Time**: ${oppFormatted} (${deltaText})${alert}`;
 }
