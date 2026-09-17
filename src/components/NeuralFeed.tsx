@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Cpu, AlertCircle, ExternalLink, Code2, Brain, ChevronDown, ChevronRight, Columns, Layers } from 'lucide-react';
 import { ModelConfig, NeuralLogEntry } from '../types';
 import { PromptInspectorModal } from './PromptInspectorModal';
@@ -25,6 +25,13 @@ export const NeuralFeed: React.FC<NeuralFeedProps> = ({
   const whiteScrollRef = useRef<HTMLDivElement>(null);
   const blackScrollRef = useRef<HTMLDivElement>(null);
 
+  // Clear expanded thinking history when match resets
+  useEffect(() => {
+    if (logs.length === 0) {
+      setExpandedThinkingIds({});
+    }
+  }, [logs.length]);
+
   // Auto scroll to top on new moves or streaming tokens so newest updates are immediately visible
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -37,10 +44,10 @@ export const NeuralFeed: React.FC<NeuralFeedProps> = ({
     setExpandedThinkingIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Reverse feeds so newest moves/chats appear at the top
-  const whiteLogs = [...logs].filter((l) => l.turn === 'w').reverse();
-  const blackLogs = [...logs].filter((l) => l.turn === 'b').reverse();
-  const allLogsReversed = [...logs].reverse();
+  // Reverse feeds so newest moves/chats appear at the top (memoized to prevent token-stream allocation churn)
+  const whiteLogs = useMemo(() => logs.filter((l) => l.turn === 'w').reverse(), [logs]);
+  const blackLogs = useMemo(() => logs.filter((l) => l.turn === 'b').reverse(), [logs]);
+  const allLogsReversed = useMemo(() => [...logs].reverse(), [logs]);
 
   const renderLogCard = (log: NeuralLogEntry) => {
     const hasIllegal = log.illegalAttempts > 0;

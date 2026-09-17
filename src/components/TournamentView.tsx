@@ -58,11 +58,23 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
   );
 
   const toggleModelSelection = (id: string) => {
+    const target = allModels.find((m) => m.id === id);
+    if (!target) return;
+
     if (selectedModelIds.includes(id)) {
       if (selectedModelIds.length > 2) {
         setSelectedModelIds(selectedModelIds.filter((mId) => mId !== id));
       }
     } else {
+      if (TournamentManager.isAlgo(target)) {
+        // Enforce max 1 algorithm bot in tournament to prevent algo vs algo pairings
+        const withoutOtherAlgos = selectedModelIds.filter((mId) => {
+          const m = allModels.find((mod) => mod.id === mId);
+          return !TournamentManager.isAlgo(m);
+        });
+        setSelectedModelIds([...withoutOtherAlgos, id]);
+        return;
+      }
       setSelectedModelIds([...selectedModelIds, id]);
     }
   };

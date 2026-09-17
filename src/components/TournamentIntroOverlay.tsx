@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Swords, Zap, Play, Pause, Trophy } from 'lucide-react';
 import { ModelConfig } from '../types';
 import { audioService } from '../services/audioService';
@@ -27,12 +27,14 @@ export const TournamentIntroOverlay: React.FC<TournamentIntroOverlayProps> = ({
   onCancel,
 }) => {
   const [countdown, setCountdown] = useState(3);
+  const onStartMatchRef = useRef(onStartMatch);
+  onStartMatchRef.current = onStartMatch;
 
   useEffect(() => {
     if (!isOpen) return;
 
     setCountdown(3);
-    // Play dramatic start chime
+    // Play dramatic start chime once per open
     try {
       audioService.playCheck();
     } catch {}
@@ -41,7 +43,7 @@ export const TournamentIntroOverlay: React.FC<TournamentIntroOverlayProps> = ({
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          onStartMatch();
+          onStartMatchRef.current();
           return 0;
         }
         return prev - 1;
@@ -49,7 +51,7 @@ export const TournamentIntroOverlay: React.FC<TournamentIntroOverlayProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOpen, onStartMatch]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

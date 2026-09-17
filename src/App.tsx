@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, useSyncExternalStore } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Chess } from 'chess.js';
-import { Header, ActiveTab } from './components/Header';
+import { Header } from './components/Header';
 import { ChessBoard } from './components/ChessBoard';
 import { PlayerPanel } from './components/PlayerPanel';
 import { ArenaControls } from './components/ArenaControls';
@@ -16,7 +16,9 @@ import { storageService } from './services/storageService';
 import { audioService } from './services/audioService';
 import { apiService } from './services/apiService';
 import { TournamentManager } from './services/tournamentManager';
+import { AlgorithmEngine } from './services/algorithmEngine';
 import { DEFAULT_MODELS } from './services/defaultModels';
+import { useGameStore } from './store/useGameStore';
 import {
   ApiKeysConfig,
   BenchmarkMetrics,
@@ -24,28 +26,34 @@ import {
   ModelConfig,
   TimeControl,
   TournamentMatch,
-  TournamentState,
   TournamentType,
 } from './types';
 
 export const App: React.FC = () => {
-  // Stored models & configuration
-  const [allModels, setAllModels] = useState<ModelConfig[]>(() => storageService.getAllModels());
-  const [apiKeys, setApiKeys] = useState<ApiKeysConfig>(() => storageService.getApiKeys());
-  const [metrics, setMetrics] = useState<Record<string, BenchmarkMetrics>>(() =>
-    storageService.getBenchmarkMetrics()
-  );
-  const [customModels, setCustomModels] = useState<ModelConfig[]>(() =>
-    storageService.getCustomModels()
-  );
+  // Zustand State Store
+  const liveGame = useGameStore((s) => s.liveGame);
+  const tournament = useGameStore((s) => s.tournament);
+  const isAutoRunningTournament = useGameStore((s) => s.isAutoRunningTournament);
+  const introMatch = useGameStore((s) => s.introMatch);
+  const activeTab = useGameStore((s) => s.activeTab);
+  const allModels = useGameStore((s) => s.allModels);
+  const apiKeys = useGameStore((s) => s.apiKeys);
+  const metrics = useGameStore((s) => s.metrics);
+  const customModels = useGameStore((s) => s.customModels);
+  const audioEnabled = useGameStore((s) => s.audioEnabled);
+
+  const setTournament = useGameStore((s) => s.setTournament);
+  const setIsAutoRunningTournament = useGameStore((s) => s.setIsAutoRunningTournament);
+  const setIntroMatch = useGameStore((s) => s.setIntroMatch);
+  const setActiveTab = useGameStore((s) => s.setActiveTab);
+  const setAudioEnabled = useGameStore((s) => s.setAudioEnabled);
+  const setAllModels = useGameStore((s) => s.setAllModels);
+  const setApiKeys = useGameStore((s) => s.setApiKeys);
+  const setMetrics = useGameStore((s) => s.setMetrics);
+  const setCustomModels = useGameStore((s) => s.setCustomModels);
 
   // Retrieve persisted selections & saved game state
   const initialSelections = useMemo(() => storageService.getArenaSelections(), []);
-
-  // Navigation
-  const [activeTab, setActiveTab] = useState<ActiveTab>(
-    () => initialSelections?.activeTab || 'arena'
-  );
 
   // Match settings
   const [whiteModel, setWhiteModel] = useState<ModelConfig>(() => {
@@ -75,42 +83,16 @@ export const App: React.FC = () => {
   const [speedMode, setSpeedMode] = useState<SpeedMode>(
     () => (initialSelections?.speedMode as SpeedMode) || '0.5s'
   );
-  const [audioEnabled, setAudioEnabled] = useState<boolean>(
-    () => initialSelections?.audioEnabled ?? true
-  );
 
-  // Tournament state
-  const [tournament, setTournament] = useState<TournamentState | null>(() =>
-    storageService.getSavedTournament()
-  );
   const tournamentRef = useRef(tournament);
   tournamentRef.current = tournament;
 
-  const [isAutoRunningTournament, setIsAutoRunningTournament] = useState(false);
   const autoRunTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentTourneyMatchRef = useRef<{
     match: TournamentMatch;
     roundIndex: number;
     matchIndex: number;
   } | null>(null);
-
-  // Tournament Intro Animation State
-  const [introMatch, setIntroMatch] = useState<{
-    match: TournamentMatch;
-    roundIndex: number;
-    matchIndex: number;
-    roundName: string;
-    totalMatchesInRound?: number;
-    tournamentTitle: string;
-    white: ModelConfig;
-    black: ModelConfig;
-  } | null>(null);
-
-  // Subscribe to backend SSE live game state
-  const liveGame = useSyncExternalStore(
-    (cb) => gameClient.subscribe(cb),
-    () => gameClient.getState()
-  );
 
   // Create lightweight Chess instance from server FEN for board rendering
   const liveChess = useMemo(() => {
@@ -305,6 +287,13 @@ export const App: React.FC = () => {
 
   // Arena Actions
   const handleStartGame = () => {
+    const isWhiteAlgo = whiteModel.provider === 'algorithm' || AlgorithmEngine.isAlgorithmModel(whiteModel.id);
+    const isBlackAlgo = blackModel.provider === 'algorithm' || AlgorithmEngine.isAlgorithmModel(blackModel.id);
+    if (isWhiteAlgo && isBlackAlgo) {
+      alert('Algorithm vs Algorithm duels are not allowed. Please select an AI model for at least one side.');
+      return;
+    }
+
     const newMatchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     gameClient.startGame({
       matchId: newMatchId,
