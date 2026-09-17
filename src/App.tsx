@@ -46,6 +46,8 @@ export const App: React.FC = () => {
   const spectatorVision = useGameStore((s) => s.spectatorVision);
   const whiteModifiers = useGameStore((s) => s.whiteModifiers);
   const blackModifiers = useGameStore((s) => s.blackModifiers);
+  const whiteSpells = useGameStore((s) => s.whiteSpells);
+  const blackSpells = useGameStore((s) => s.blackSpells);
 
   const setTournament = useGameStore((s) => s.setTournament);
   const setIsAutoRunningTournament = useGameStore((s) => s.setIsAutoRunningTournament);
@@ -60,6 +62,8 @@ export const App: React.FC = () => {
   const setSpectatorVision = useGameStore((s) => s.setSpectatorVision);
   const setWhiteModifiers = useGameStore((s) => s.setWhiteModifiers);
   const setBlackModifiers = useGameStore((s) => s.setBlackModifiers);
+  const setWhiteSpells = useGameStore((s) => s.setWhiteSpells);
+  const setBlackSpells = useGameStore((s) => s.setBlackSpells);
 
   // Retrieve persisted selections & saved game state
   const initialSelections = useMemo(() => storageService.getArenaSelections(), []);
@@ -199,6 +203,8 @@ export const App: React.FC = () => {
         gameMode: tourneyMode,
         whiteModifiers: useGameStore.getState().whiteModifiers,
         blackModifiers: useGameStore.getState().blackModifiers,
+        whiteSpells: useGameStore.getState().whiteSpells,
+        blackSpells: useGameStore.getState().blackSpells,
         tournamentId: tournamentRef.current?.id || null,
         roundNumber: roundIndex + 1,
         matchIndex,
@@ -307,6 +313,10 @@ export const App: React.FC = () => {
       alert('Algorithm vs Algorithm duels are not allowed. Please select an AI model for at least one side.');
       return;
     }
+    if (gameMode !== 'standard' && (isWhiteAlgo || isBlackAlgo)) {
+      alert('Non-LLM algorithm bots cannot play custom game modes. Please select LLM models for variant modes.');
+      return;
+    }
 
     const newMatchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     gameClient.startGame({
@@ -318,6 +328,8 @@ export const App: React.FC = () => {
       gameMode,
       whiteModifiers,
       blackModifiers,
+      whiteSpells,
+      blackSpells,
       tournamentId: tournament?.id || null,
     });
   };
@@ -490,6 +502,8 @@ export const App: React.FC = () => {
               spectatorVision={spectatorVision}
               whiteModifiers={liveGame.whiteModifiers || whiteModifiers}
               blackModifiers={liveGame.blackModifiers || blackModifiers}
+              whiteSpells={liveGame.whiteSpells || whiteSpells}
+              blackSpells={liveGame.blackSpells || blackSpells}
               audioEnabled={audioEnabled}
               gameStatus={liveGame.status}
               onSelectWhite={(m) => {
@@ -509,6 +523,8 @@ export const App: React.FC = () => {
               onSetSpectatorVision={setSpectatorVision}
               onSetWhiteModifiers={setWhiteModifiers}
               onSetBlackModifiers={setBlackModifiers}
+              onSetWhiteSpells={setWhiteSpells}
+              onSetBlackSpells={setBlackSpells}
               onToggleAudio={handleToggleAudio}
               onStartGame={handleStartGame}
               onPauseGame={handlePauseGame}
@@ -534,6 +550,7 @@ export const App: React.FC = () => {
               isThinking={activeThinking.side === 'b'}
               thoughtText={latestBlackThought}
               modifiers={liveGame.gameMode === 'mutators' ? liveGame.blackModifiers || blackModifiers : undefined}
+              spells={liveGame.gameMode === 'spell_draft' ? liveGame.blackSpells || blackSpells : undefined}
             />
 
             {/* Chess Board */}
@@ -546,6 +563,8 @@ export const App: React.FC = () => {
               portalSquares={liveGame.portalSquares}
               fogVision={liveGame.fogVision}
               spectatorVision={spectatorVision}
+              duckSquare={liveGame.duckSquare}
+              crazyhouseReserves={liveGame.crazyhouseReserves}
             />
 
             {/* White Player Panel (Bottom) */}
@@ -559,6 +578,7 @@ export const App: React.FC = () => {
               isThinking={activeThinking.side === 'w'}
               thoughtText={latestWhiteThought}
               modifiers={liveGame.gameMode === 'mutators' ? liveGame.whiteModifiers || whiteModifiers : undefined}
+              spells={liveGame.gameMode === 'spell_draft' ? liveGame.whiteSpells || whiteSpells : undefined}
             />
 
             {/* Game Result Banner */}

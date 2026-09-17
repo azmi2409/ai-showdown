@@ -1,5 +1,5 @@
 import React from 'react';
-import { ModelConfig, AVAILABLE_MODIFIERS } from '../types';
+import { ModelConfig, AVAILABLE_MODIFIERS, AVAILABLE_SPELLS } from '../types';
 
 interface PlayerPanelProps {
   model: ModelConfig;
@@ -11,6 +11,7 @@ interface PlayerPanelProps {
   isThinking?: boolean;
   thoughtText?: string;
   modifiers?: string[];
+  spells?: string[];
 }
 
 const PIECE_SYMBOLS: Record<string, string> = {
@@ -31,6 +32,7 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
   isThinking,
   thoughtText,
   modifiers,
+  spells,
 }) => {
   // Format clock: MM:SS.s or SS.ss if under 10 seconds
   const totalSeconds = Math.max(0, timeRemainingMs / 1000);
@@ -84,6 +86,27 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
                   <span key={modId} className="modifier-chip" title={mod.description}>
                     <span>{mod.icon}</span>
                     <span>{mod.name}</span>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Drafted Spells Badges */}
+          {spells && spells.length > 0 && (
+            <div className="modifier-badge-list">
+              {spells.map((spellId, sIdx) => {
+                const sp = AVAILABLE_SPELLS.find((s) => s.id === spellId);
+                if (!sp) return null;
+                return (
+                  <span
+                    key={`${spellId}_${sIdx}`}
+                    className="modifier-chip"
+                    style={{ background: 'rgba(236, 72, 153, 0.15)', borderColor: 'rgba(236, 72, 153, 0.4)', color: '#f472b6' }}
+                    title={sp.description}
+                  >
+                    <span>{sp.icon}</span>
+                    <span>{sp.name}</span>
                   </span>
                 );
               })}

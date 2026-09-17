@@ -44,6 +44,10 @@ export interface LiveGameState {
   blackModifiers: string[];
   portalSquares?: [string, string];
   fogVision?: { w: string[]; b: string[] };
+  duckSquare?: string | null;
+  crazyhouseReserves?: { w: string[]; b: string[] };
+  whiteSpells?: string[];
+  blackSpells?: string[];
   fen: string;
   turn: 'w' | 'b';
   clocks: { w: number; b: number };
@@ -70,6 +74,8 @@ interface GameStoreState {
   spectatorVision: SpectatorVision;
   whiteModifiers: string[];
   blackModifiers: string[];
+  whiteSpells: string[];
+  blackSpells: string[];
 
   // Live Game State
   liveGame: LiveGameState;
@@ -96,6 +102,8 @@ interface GameStoreState {
   setSpectatorVision: (vision: SpectatorVision) => void;
   setWhiteModifiers: (modifiers: string[]) => void;
   setBlackModifiers: (modifiers: string[]) => void;
+  setWhiteSpells: (spells: string[]) => void;
+  setBlackSpells: (spells: string[]) => void;
 
   setLiveGame: (partial: Partial<LiveGameState>) => void;
   updateOnMove: (payload: {
@@ -106,6 +114,10 @@ interface GameStoreState {
     turn: 'w' | 'b';
     inCheck: boolean;
     fogVision?: { w: string[]; b: string[] };
+    duckSquare?: string | null;
+    crazyhouseReserves?: { w: string[]; b: string[] };
+    whiteSpells?: string[];
+    blackSpells?: string[];
   }) => void;
   updateClock: (clocks: { w: number; b: number }) => void;
   updateThought: (thinking: { side: 'w' | 'b' | null; modelName: string; thoughtText?: string }) => void;
@@ -153,6 +165,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
   spectatorVision: 'all',
   whiteModifiers: ['portal_squares', 'bounty_hunter', 'exploding_rooks'],
   blackModifiers: ['ghost_knights', 'pawn_blitz', 'vampire_queen'],
+  whiteSpells: ['swap_pawns', 'catapult_knight'],
+  blackSpells: ['resurrection', 'frost_freeze'],
 
   liveGame: {
     matchId: '',
@@ -164,6 +178,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
     gameMode: 'standard',
     whiteModifiers: ['portal_squares', 'bounty_hunter', 'exploding_rooks'],
     blackModifiers: ['ghost_knights', 'pawn_blitz', 'vampire_queen'],
+    whiteSpells: ['swap_pawns', 'catapult_knight'],
+    blackSpells: ['resurrection', 'frost_freeze'],
     portalSquares: ['d4', 'e5'],
     fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     turn: 'w',
@@ -205,6 +221,16 @@ export const useGameStore = create<GameStoreState>((set) => ({
       blackModifiers,
       liveGame: { ...state.liveGame, blackModifiers },
     })),
+  setWhiteSpells: (whiteSpells) =>
+    set((state) => ({
+      whiteSpells,
+      liveGame: { ...state.liveGame, whiteSpells },
+    })),
+  setBlackSpells: (blackSpells) =>
+    set((state) => ({
+      blackSpells,
+      liveGame: { ...state.liveGame, blackSpells },
+    })),
 
   setLiveGame: (partial) =>
     set((state) => ({
@@ -224,6 +250,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
         turn: payload.turn,
         inCheck: payload.inCheck,
         fogVision: payload.fogVision || state.liveGame.fogVision,
+        duckSquare: payload.duckSquare !== undefined ? payload.duckSquare : state.liveGame.duckSquare,
+        crazyhouseReserves: payload.crazyhouseReserves || state.liveGame.crazyhouseReserves,
+        whiteSpells: payload.whiteSpells || state.liveGame.whiteSpells,
+        blackSpells: payload.blackSpells || state.liveGame.blackSpells,
       },
     })),
 

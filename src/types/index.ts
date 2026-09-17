@@ -1,4 +1,50 @@
-export type GameMode = 'standard' | 'mutators' | 'fog_of_war';
+export type GameMode =
+  | 'standard'
+  | 'duck_chess'
+  | 'fog_of_war'
+  | 'crazyhouse'
+  | 'atomic_chess'
+  | 'spell_draft'
+  | 'mutators';
+
+export interface SpellCard {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  manaCost: number;
+}
+
+export const AVAILABLE_SPELLS: SpellCard[] = [
+  {
+    id: 'swap_pawns',
+    name: 'Pawn Warp',
+    icon: '🔄',
+    description: 'Swap positions of any two of your active pawns.',
+    manaCost: 1,
+  },
+  {
+    id: 'catapult_knight',
+    name: 'Catapult Leap',
+    icon: '🚀',
+    description: 'Launch a Knight across 3 squares into enemy territory.',
+    manaCost: 1,
+  },
+  {
+    id: 'frost_freeze',
+    name: 'Glacial Freeze',
+    icon: '❄️',
+    description: 'Freeze an enemy piece in place, blocking its move for 1 turn.',
+    manaCost: 1,
+  },
+  {
+    id: 'resurrection',
+    name: 'Soul Revive',
+    icon: '✨',
+    description: 'Resurrect a captured pawn back onto an empty back-rank square.',
+    manaCost: 1,
+  },
+];
 
 export interface DraftModifier {
   id: string;
