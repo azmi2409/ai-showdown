@@ -17,7 +17,8 @@ tournamentsRouter.get('/', (_req: Request, res: Response) => {
 // GET /api/tournaments/:id
 tournamentsRouter.get('/:id', (req: Request, res: Response) => {
   try {
-    const tournament = dbStore.getTournamentById(req.params.id);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const tournament = dbStore.getTournamentById(id);
     if (!tournament) {
       return res.status(404).json({ success: false, error: 'Tournament not found' });
     }

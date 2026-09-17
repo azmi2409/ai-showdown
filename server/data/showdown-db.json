@@ -115,9 +115,839 @@
         "kFactorBlack": 40
       },
       "createdAt": 1789656240212
+    },
+    {
+      "id": "match_1789656778536_rj9qc",
+      "tournamentId": "tourney_1789653860358",
+      "whiteModelId": "ag-gemini-38-flash",
+      "whiteModelName": "Gemini 3.8 Flash",
+      "blackModelId": "cx-gpt-56-luna",
+      "blackModelName": "GPT 5.6 Luna",
+      "winner": "draw",
+      "reason": "threefold",
+      "movesCount": 61,
+      "durationMs": 156124,
+      "pgn": "[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. a3 Nc6 2. a4 Rb8 3. a5 Ra8 4. a6 Rb8 5. axb7 Rxb7 6. b3 Nh6 7. b4 Rg8 8. b5 Rh8 9. b6 Rg8 10. bxa7 Rh8 11. a8=N Rg8 12. Nxc7+ Qxc7 13. c3 Kd8 14. c4 Ke8 15. c5 Kd8 16. d3 Ke8 17. d4 Kd8 18. d5 Ke8 19. d6 Kd8 20. dxc7+ Ke8 21. e3 Rh8 22. e4 Rg8 23. e5 Rh8 24. e6 Rg8 25. exd7+ Bxd7 26. c8=N Kd8 27. Nxe7 Ke8 28. Nc8 Kd8 29. Ne7 Ke8 30. Nc8 Kd8 31. Ne7 *",
+      "finalFen": "3k1br1/1r1bNppp/2n4n/2P5/8/8/5PPP/RNBQKBNR b KQ - 8 31",
+      "timeControl": {
+        "name": "Blitz 3+0",
+        "baseSeconds": 180,
+        "incrementSeconds": 0
+      },
+      "telemetry": {
+        "whiteIllegalMoves": 31,
+        "blackIllegalMoves": 30,
+        "whiteAvgLatencyMs": 0,
+        "blackAvgLatencyMs": 0,
+        "whiteToolCallsCount": 0,
+        "blackToolCallsCount": 0
+      },
+      "eloChange": {
+        "whiteDelta": 1,
+        "blackDelta": -1,
+        "whiteBefore": 2596,
+        "blackBefore": 2650,
+        "whiteAfter": 2597,
+        "blackAfter": 2649,
+        "kFactorWhite": 40,
+        "kFactorBlack": 40
+      },
+      "createdAt": 1789656934670
+    },
+    {
+      "id": "match_1789657038218_0jycc",
+      "tournamentId": "tourney_1789653860358",
+      "whiteModelId": "ag-gemini-38-flash",
+      "whiteModelName": "Gemini 3.8 Flash",
+      "blackModelId": "cx-gpt-56-luna",
+      "blackModelName": "GPT 5.6 Luna",
+      "winner": "w",
+      "reason": "checkmate",
+      "movesCount": 39,
+      "durationMs": 130799,
+      "pgn": "[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. e4 c5 2. Nf3 Nc6 3. Bb5 Nf6 4. Nc3 a6 5. Bxc6 bxc6 6. e5 d5 7. exf6 exf6 8. O-O Bd7 9. Re1+ Qe7 10. Rxe7+ Bxe7 11. d4 O-O 12. Bf4 cxd4 13. Nxd4 c5 14. Nxd5 Be6 15. Nxe7+ Kh8 16. Nxe6 fxe6 17. Qd6 Rf7 18. Qxe6 Rxe7 19. Qxe7 Re8 20. Qxe8# *",
+      "finalFen": "4Q2k/6pp/p4p2/2p5/5B2/8/PPP2PPP/R5K1 b - - 0 20",
+      "timeControl": {
+        "name": "Blitz 3+0",
+        "baseSeconds": 180,
+        "incrementSeconds": 0
+      },
+      "telemetry": {
+        "whiteIllegalMoves": 0,
+        "blackIllegalMoves": 0,
+        "whiteAvgLatencyMs": 0,
+        "blackAvgLatencyMs": 0,
+        "whiteToolCallsCount": 0,
+        "blackToolCallsCount": 0
+      },
+      "eloChange": {
+        "whiteDelta": 21,
+        "blackDelta": -21,
+        "whiteBefore": 2597,
+        "blackBefore": 2649,
+        "whiteAfter": 2618,
+        "blackAfter": 2628,
+        "kFactorWhite": 40,
+        "kFactorBlack": 40
+      },
+      "createdAt": 1789657169023
+    },
+    {
+      "id": "match_1789657236035_48nbv",
+      "tournamentId": "tourney_1789657231685",
+      "roundNumber": 1,
+      "matchIndex": 1,
+      "whiteModelId": "ag-claude-opus-46",
+      "whiteModelName": "Claude Opus 4.6 (Thinking)",
+      "blackModelId": "ag-gemini-36-flash-medium",
+      "blackModelName": "Gemini 3.6 Flash (Medium)",
+      "winner": "b",
+      "reason": "resignation",
+      "movesCount": 38,
+      "durationMs": 254803,
+      "pgn": "[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be3 e5 7. Nb3 Be6 8. f3 Nbd7 9. Qd2 b5 10. O-O-O Be7 11. g4 b4 12. Nd5 Bxd5 13. exd5 Nb6 14. g5 Nfxd5 15. Nc5 dxc5 16. Bxc5 Bxc5 17. Qxd5 Qxd5 18. Rxd5 Nxd5 19. Bb5+ axb5 *",
+      "finalFen": "r3k2r/5ppp/8/1pbnp1P1/1p6/5P2/PPP4P/2K4R w kq - 0 20",
+      "timeControl": {
+        "name": "Blitz 3+0",
+        "baseSeconds": 180,
+        "incrementSeconds": 0
+      },
+      "telemetry": {
+        "whiteIllegalMoves": 0,
+        "blackIllegalMoves": 0,
+        "whiteAvgLatencyMs": 0,
+        "blackAvgLatencyMs": 0,
+        "whiteToolCallsCount": 0,
+        "blackToolCallsCount": 0
+      },
+      "eloChange": {
+        "whiteDelta": -30,
+        "blackDelta": 30,
+        "whiteBefore": 2620,
+        "blackBefore": 2465,
+        "whiteAfter": 2590,
+        "blackAfter": 2495,
+        "kFactorWhite": 40,
+        "kFactorBlack": 40
+      },
+      "createdAt": 1789657490845
+    },
+    {
+      "id": "match_1789657512962_fvmb0",
+      "tournamentId": "tourney_1789657231685",
+      "roundNumber": 1,
+      "matchIndex": 2,
+      "whiteModelId": "cx-gpt-55",
+      "whiteModelName": "GPT 5.5",
+      "blackModelId": "ag-gemini-37-flash-medium",
+      "blackModelName": "Gemini 3.7 Flash (Medium)",
+      "winner": "b",
+      "reason": "checkmate",
+      "movesCount": 56,
+      "durationMs": 273630,
+      "pgn": "[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be3 e5 7. Nb3 Be6 8. Qd2 Nbd7 9. O-O-O Be7 10. f3 b5 11. g4 b4 12. Nd5 Bxd5 13. exd5 a5 14. g5 a4 15. gxf6 axb3 16. fxe7 bxa2 17. exd8=Q+ Rxd8 18. Qxb4 a1=Q+ 19. Kd2 Qa8 20. Qxd6 Nf6 21. Qxe5+ Kf8 22. Qe7+ Kxe7 23. d6+ Rxd6+ 24. Bd3 Qxf3 25. Rhf1 Ne4+ 26. Ke1 Qxe3+ 27. Be2 Rxd1+ 28. Kxd1 Qd2# *",
+      "finalFen": "7r/4kppp/8/8/4n3/8/1PPqB2P/3K1R2 w - - 1 29",
+      "timeControl": {
+        "name": "Blitz 3+0",
+        "baseSeconds": 180,
+        "incrementSeconds": 0
+      },
+      "telemetry": {
+        "whiteIllegalMoves": 0,
+        "blackIllegalMoves": 0,
+        "whiteAvgLatencyMs": 0,
+        "blackAvgLatencyMs": 0,
+        "whiteToolCallsCount": 0,
+        "blackToolCallsCount": 0
+      },
+      "eloChange": {
+        "whiteDelta": -27,
+        "blackDelta": 27,
+        "whiteBefore": 2600,
+        "blackBefore": 2505,
+        "whiteAfter": 2573,
+        "blackAfter": 2532,
+        "kFactorWhite": 40,
+        "kFactorBlack": 40
+      },
+      "createdAt": 1789657786603
+    },
+    {
+      "id": "match_1789657794600_xkme2",
+      "tournamentId": "tourney_1789657231685",
+      "roundNumber": 1,
+      "matchIndex": 3,
+      "whiteModelId": "ag-gemini-38-flash",
+      "whiteModelName": "Gemini 3.8 Flash",
+      "blackModelId": "ag-claude-sonnet-46",
+      "blackModelName": "Claude Sonnet 4.6",
+      "winner": "w",
+      "reason": "checkmate",
+      "movesCount": 49,
+      "durationMs": 151433,
+      "pgn": "[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. e4 c5 2. Nf3 Nc6 3. Bb5 a6 4. Bxc6 dxc6 5. O-O Bg4 6. h3 Bxf3 7. Qxf3 Nf6 8. d3 e5 9. Nd2 Be7 10. Nc4 O-O 11. Nxe5 Qd4 12. Nc4 Qxc4 13. dxc4 Nxe4 14. Qxe4 Bd6 15. Be3 Bh2+ 16. Kxh2 Rae8 17. Qf5 g6 18. Qd7 Rxe3 19. fxe3 f5 20. Qxb7 f4 21. exf4 Rxf4 22. Rxf4 h5 23. Qf7+ Kh8 24. Re1 h4 25. Re8# *",
+      "finalFen": "4R2k/5Q2/p1p3p1/2p5/2P2R1p/7P/PPP3PK/8 b - - 1 25",
+      "timeControl": {
+        "name": "Blitz 3+0",
+        "baseSeconds": 180,
+        "incrementSeconds": 0
+      },
+      "telemetry": {
+        "whiteIllegalMoves": 0,
+        "blackIllegalMoves": 0,
+        "whiteAvgLatencyMs": 0,
+        "blackAvgLatencyMs": 0,
+        "whiteToolCallsCount": 0,
+        "blackToolCallsCount": 0
+      },
+      "eloChange": {
+        "whiteDelta": 15,
+        "blackDelta": -15,
+        "whiteBefore": 2618,
+        "blackBefore": 2560,
+        "whiteAfter": 2633,
+        "blackAfter": 2545,
+        "kFactorWhite": 40,
+        "kFactorBlack": 40
+      },
+      "createdAt": 1789657946039
+    },
+    {
+      "id": "match_1789657952556_16tm2",
+      "tournamentId": "tourney_1789657231685",
+      "roundNumber": 2,
+      "matchIndex": 0,
+      "whiteModelId": "cx-gpt-56-sol",
+      "whiteModelName": "GPT 5.6 Sol",
+      "blackModelId": "ag-gemini-36-flash-medium",
+      "blackModelName": "Gemini 3.6 Flash (Medium)",
+      "winner": "b",
+      "reason": "timeout",
+      "movesCount": 50,
+      "durationMs": 286590,
+      "pgn": "[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be3 e5 7. Nb3 Be6 8. f3 Nbd7 9. Qd2 b5 10. O-O-O Be7 11. g4 Nb6 12. g5 Nfd7 13. f4 Nc4 14. Bxc4 bxc4 15. Nd4 exd4 16. Bxd4 O-O 17. f5 Bxg5 18. fxe6 Bxd2+ 19. Rxd2 fxe6 20. e5 d5 21. Rd3 cxd3 22. cxd3 Qg5+ 23. Kb1 Qd2 24. Rd1 Rab8 25. Rxd2 Rf1+ *",
+      "finalFen": "1r4k1/3n2pp/p3p3/3pP3/3B4/2NP4/PP1R3P/1K3r2 w - - 1 26",
+      "timeControl": {
+        "name": "Blitz 3+0",
+        "baseSeconds": 180,
+        "incrementSeconds": 0
+      },
+      "telemetry": {
+        "whiteIllegalMoves": 0,
+        "blackIllegalMoves": 0,
+        "whiteAvgLatencyMs": 0,
+        "blackAvgLatencyMs": 0,
+        "whiteToolCallsCount": 0,
+        "blackToolCallsCount": 0
+      },
+      "eloChange": {
+        "whiteDelta": -31,
+        "blackDelta": 31,
+        "whiteBefore": 2666,
+        "blackBefore": 2495,
+        "whiteAfter": 2635,
+        "blackAfter": 2526,
+        "kFactorWhite": 40,
+        "kFactorBlack": 40
+      },
+      "createdAt": 1789658239154
+    },
+    {
+      "id": "match_1789658245856_abhoa",
+      "tournamentId": "tourney_1789657231685",
+      "roundNumber": 2,
+      "matchIndex": 1,
+      "whiteModelId": "ag-gemini-37-flash-medium",
+      "whiteModelName": "Gemini 3.7 Flash (Medium)",
+      "blackModelId": "ag-gemini-38-flash",
+      "blackModelName": "Gemini 3.8 Flash",
+      "winner": "w",
+      "reason": "resignation",
+      "movesCount": 50,
+      "durationMs": 148462,
+      "pgn": "[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be3 e5 7. Nb3 Be6 8. f3 Ra7 9. Bxa7 Nc6 10. Be3 Be7 11. Qd2 O-O 12. O-O-O b5 13. Nd5 Bxd5 14. exd5 Nb8 15. Na5 Qc7 16. Kb1 Bd8 17. Nb3 Nbd7 18. g4 Nb6 19. Bxb6 Qxb6 20. g5 Nh5 21. Bd3 Nf4 22. Be4 Bxg5 23. h4 Bh6 24. Qh2 Qa5 25. Nxa5 f5 *",
+      "finalFen": "5rk1/6pp/p2p3b/Np1Ppp2/4Bn1P/5P2/PPP4Q/1K1R3R w - - 0 26",
+      "timeControl": {
+        "name": "Blitz 3+0",
+        "baseSeconds": 180,
+        "incrementSeconds": 0
+      },
+      "telemetry": {
+        "whiteIllegalMoves": 25,
+        "blackIllegalMoves": 6,
+        "whiteAvgLatencyMs": 0,
+        "blackAvgLatencyMs": 0,
+        "whiteToolCallsCount": 0,
+        "blackToolCallsCount": 0
+      },
+      "eloChange": {
+        "whiteDelta": 24,
+        "blackDelta": -24,
+        "whiteBefore": 2532,
+        "blackBefore": 2633,
+        "whiteAfter": 2556,
+        "blackAfter": 2609,
+        "kFactorWhite": 40,
+        "kFactorBlack": 40
+      },
+      "createdAt": 1789658394325
+    },
+    {
+      "id": "match_1789658417396_nit08",
+      "tournamentId": "tourney_1789657231685",
+      "roundNumber": 3,
+      "matchIndex": 0,
+      "whiteModelId": "ag-gemini-36-flash-medium",
+      "whiteModelName": "Gemini 3.6 Flash (Medium)",
+      "blackModelId": "ag-gemini-37-flash-medium",
+      "blackModelName": "Gemini 3.7 Flash (Medium)",
+      "winner": "w",
+      "reason": "resignation",
+      "movesCount": 99,
+      "durationMs": 302817,
+      "pgn": "[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Bg5 e6 7. f4 Be7 8. Qf3 Qc7 9. O-O-O Nbd7 10. g4 b5 11. Bxf6 Nxf6 12. g5 Nd7 13. f5 Bxg5+ 14. Kb1 Ne5 15. Qh5 Qe7 16. fxe6 g6 17. exf7+ Kxf7 18. Qe2 Bg4 19. Qf2+ Kg7 20. Nd5 Qf7 21. Qxf7+ Kxf7 22. Be2 Bxe2 23. Nxe2 Kg7 24. Nc7 Rac8 25. Ne6+ Kh6 26. Nxg5 Kxg5 27. Rxd6 Rhd8 28. Rd5 Rxd5 29. exd5 Rd8 30. Nc3 b4 31. Ne4+ Kf4 32. Nc5 Rxd5 33. Nxa6 Rd4 34. Nc5 Ke3 35. Re1+ Kf2 36. Rc1 Nf3 37. Nd3+ Ke2 38. c3 Kxd3 39. cxd4 Nd2+ 40. Ka1 Kxd4 41. Rd1 Kd3 42. a4 Kc2 43. Rxd2+ Kxd2 44. a5 Kd3 45. a6 b3 46. a7 Kc2 47. a8=Q g5 48. Qg2+ Kd1 49. Kb1 Ke1 50. Kc1 *",
+      "finalFen": "8/7p/8/6p1/8/1p6/1P4QP/2K1k3 b - - 5 50",
+      "timeControl": {
+        "name": "Blitz 3+0",
+        "baseSeconds": 180,
+        "incrementSeconds": 0
+      },
+      "telemetry": {
+        "whiteIllegalMoves": 0,
+        "blackIllegalMoves": 0,
+        "whiteAvgLatencyMs": 0,
+        "blackAvgLatencyMs": 0,
+        "whiteToolCallsCount": 0,
+        "blackToolCallsCount": 0
+      },
+      "eloChange": {
+        "whiteDelta": 20,
+        "blackDelta": -20,
+        "whiteBefore": 2526,
+        "blackBefore": 2556,
+        "whiteAfter": 2546,
+        "blackAfter": 2536,
+        "kFactorWhite": 40,
+        "kFactorBlack": 40
+      },
+      "createdAt": 1789658720234
     }
   ],
-  "tournaments": [],
+  "tournaments": [
+    {
+      "id": "tourney_1789657231685",
+      "title": "2026 World AI Championship",
+      "type": "knockout",
+      "models": [
+        {
+          "id": "cx-gpt-56-sol",
+          "name": "GPT 5.6 Sol",
+          "provider": "openai",
+          "modelIdentifier": "cx/gpt-5.6-sol",
+          "avatar": "☀️",
+          "badgeColor": "#f59e0b",
+          "playStyle": "Bright tactical attacking, dynamic piece sacrifices",
+          "simulatedElo": 2680,
+          "description": "GPT 5.6 Sol model via local proxy endpoint."
+        },
+        {
+          "id": "cx-gpt-55",
+          "name": "GPT 5.5",
+          "provider": "openai",
+          "modelIdentifier": "cx/gpt-5.5",
+          "avatar": "⚡",
+          "badgeColor": "#3b82f6",
+          "playStyle": "High-speed classic grandmaster style, rapid opening play",
+          "simulatedElo": 2600,
+          "description": "GPT 5.5 baseline model."
+        },
+        {
+          "id": "ag-gemini-38-flash",
+          "name": "Gemini 3.8 Flash",
+          "provider": "openai",
+          "modelIdentifier": "ag/gemini-3.8-flash",
+          "avatar": "⚡",
+          "badgeColor": "#38bdf8",
+          "playStyle": "Ultra-fast frontier tactician with live reasoning",
+          "simulatedElo": 2580,
+          "description": "Google Gemini 3.8 Flash via local proxy endpoint."
+        },
+        {
+          "id": "ag-claude-opus-46",
+          "name": "Claude Opus 4.6 (Thinking)",
+          "provider": "openai",
+          "modelIdentifier": "ag/claude-opus-4-6-thinking",
+          "avatar": "🧠",
+          "badgeColor": "#8b5cf6",
+          "playStyle": "Deep foresight, profound positional and endgame mastery",
+          "simulatedElo": 2620,
+          "description": "Anthropic Claude Opus 4.6 with reasoning via local endpoint."
+        },
+        {
+          "id": "ag-claude-sonnet-46",
+          "name": "Claude Sonnet 4.6",
+          "provider": "openai",
+          "modelIdentifier": "ag/claude-sonnet-4-6",
+          "avatar": "🟧",
+          "badgeColor": "#f97316",
+          "playStyle": "Sharp tactical balance, fluid attacks & rapid calculation",
+          "simulatedElo": 2560,
+          "description": "Anthropic Claude Sonnet 4.6 via local endpoint."
+        },
+        {
+          "id": "ag-gemini-37-flash-medium",
+          "name": "Gemini 3.7 Flash (Medium)",
+          "provider": "openai",
+          "modelIdentifier": "ag/gemini-3.7-flash-medium",
+          "avatar": "🔷",
+          "badgeColor": "#06b6d4",
+          "playStyle": "Dynamic piece coordination and tactical defense",
+          "simulatedElo": 2510,
+          "description": "Gemini 3.7 Flash Medium via local endpoint."
+        },
+        {
+          "id": "ag-gemini-36-flash-medium",
+          "name": "Gemini 3.6 Flash (Medium)",
+          "provider": "openai",
+          "modelIdentifier": "ag/gemini-3.6-flash-medium",
+          "avatar": "💠",
+          "badgeColor": "#6366f1",
+          "playStyle": "Direct tactical calculation and aggressive initiative",
+          "simulatedElo": 2460,
+          "description": "Gemini 3.6 Flash Medium via local endpoint."
+        }
+      ],
+      "timeControl": {
+        "name": "Blitz 3+0",
+        "baseSeconds": 180,
+        "incrementSeconds": 0
+      },
+      "rounds": [
+        {
+          "roundNumber": 1,
+          "name": "Quarterfinals",
+          "matches": [
+            {
+              "id": "r1_m0",
+              "round": 1,
+              "matchIndex": 0,
+              "white": {
+                "id": "cx-gpt-56-sol",
+                "name": "GPT 5.6 Sol",
+                "provider": "openai",
+                "modelIdentifier": "cx/gpt-5.6-sol",
+                "avatar": "☀️",
+                "badgeColor": "#f59e0b",
+                "playStyle": "Bright tactical attacking, dynamic piece sacrifices",
+                "simulatedElo": 2680,
+                "description": "GPT 5.6 Sol model via local proxy endpoint."
+              },
+              "black": null,
+              "winner": {
+                "id": "cx-gpt-56-sol",
+                "name": "GPT 5.6 Sol",
+                "provider": "openai",
+                "modelIdentifier": "cx/gpt-5.6-sol",
+                "avatar": "☀️",
+                "badgeColor": "#f59e0b",
+                "playStyle": "Bright tactical attacking, dynamic piece sacrifices",
+                "simulatedElo": 2680,
+                "description": "GPT 5.6 Sol model via local proxy endpoint."
+              },
+              "result": null,
+              "status": "bye"
+            },
+            {
+              "id": "r1_m1",
+              "round": 1,
+              "matchIndex": 1,
+              "white": {
+                "id": "ag-claude-opus-46",
+                "name": "Claude Opus 4.6 (Thinking)",
+                "provider": "openai",
+                "modelIdentifier": "ag/claude-opus-4-6-thinking",
+                "avatar": "🧠",
+                "badgeColor": "#8b5cf6",
+                "playStyle": "Deep foresight, profound positional and endgame mastery",
+                "simulatedElo": 2620,
+                "description": "Anthropic Claude Opus 4.6 with reasoning via local endpoint."
+              },
+              "black": {
+                "id": "ag-gemini-36-flash-medium",
+                "name": "Gemini 3.6 Flash (Medium)",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.6-flash-medium",
+                "avatar": "💠",
+                "badgeColor": "#6366f1",
+                "playStyle": "Direct tactical calculation and aggressive initiative",
+                "simulatedElo": 2460,
+                "description": "Gemini 3.6 Flash Medium via local endpoint."
+              },
+              "winner": {
+                "id": "ag-gemini-36-flash-medium",
+                "name": "Gemini 3.6 Flash (Medium)",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.6-flash-medium",
+                "avatar": "💠",
+                "badgeColor": "#6366f1",
+                "playStyle": "Direct tactical calculation and aggressive initiative",
+                "simulatedElo": 2460,
+                "description": "Gemini 3.6 Flash Medium via local endpoint."
+              },
+              "result": {
+                "winner": "b",
+                "reason": "resignation",
+                "description": "White resigned.",
+                "timestamp": 1789657490838
+              },
+              "status": "completed"
+            },
+            {
+              "id": "r1_m2",
+              "round": 1,
+              "matchIndex": 2,
+              "white": {
+                "id": "cx-gpt-55",
+                "name": "GPT 5.5",
+                "provider": "openai",
+                "modelIdentifier": "cx/gpt-5.5",
+                "avatar": "⚡",
+                "badgeColor": "#3b82f6",
+                "playStyle": "High-speed classic grandmaster style, rapid opening play",
+                "simulatedElo": 2600,
+                "description": "GPT 5.5 baseline model."
+              },
+              "black": {
+                "id": "ag-gemini-37-flash-medium",
+                "name": "Gemini 3.7 Flash (Medium)",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.7-flash-medium",
+                "avatar": "🔷",
+                "badgeColor": "#06b6d4",
+                "playStyle": "Dynamic piece coordination and tactical defense",
+                "simulatedElo": 2510,
+                "description": "Gemini 3.7 Flash Medium via local endpoint."
+              },
+              "winner": {
+                "id": "ag-gemini-37-flash-medium",
+                "name": "Gemini 3.7 Flash (Medium)",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.7-flash-medium",
+                "avatar": "🔷",
+                "badgeColor": "#06b6d4",
+                "playStyle": "Dynamic piece coordination and tactical defense",
+                "simulatedElo": 2510,
+                "description": "Gemini 3.7 Flash Medium via local endpoint."
+              },
+              "result": {
+                "winner": "b",
+                "reason": "checkmate",
+                "description": "Checkmate! Black wins!",
+                "timestamp": 1789657786592
+              },
+              "status": "completed"
+            },
+            {
+              "id": "r1_m3",
+              "round": 1,
+              "matchIndex": 3,
+              "white": {
+                "id": "ag-gemini-38-flash",
+                "name": "Gemini 3.8 Flash",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.8-flash",
+                "avatar": "⚡",
+                "badgeColor": "#38bdf8",
+                "playStyle": "Ultra-fast frontier tactician with live reasoning",
+                "simulatedElo": 2580,
+                "description": "Google Gemini 3.8 Flash via local proxy endpoint."
+              },
+              "black": {
+                "id": "ag-claude-sonnet-46",
+                "name": "Claude Sonnet 4.6",
+                "provider": "openai",
+                "modelIdentifier": "ag/claude-sonnet-4-6",
+                "avatar": "🟧",
+                "badgeColor": "#f97316",
+                "playStyle": "Sharp tactical balance, fluid attacks & rapid calculation",
+                "simulatedElo": 2560,
+                "description": "Anthropic Claude Sonnet 4.6 via local endpoint."
+              },
+              "winner": {
+                "id": "ag-gemini-38-flash",
+                "name": "Gemini 3.8 Flash",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.8-flash",
+                "avatar": "⚡",
+                "badgeColor": "#38bdf8",
+                "playStyle": "Ultra-fast frontier tactician with live reasoning",
+                "simulatedElo": 2580,
+                "description": "Google Gemini 3.8 Flash via local proxy endpoint."
+              },
+              "result": {
+                "winner": "w",
+                "reason": "checkmate",
+                "description": "Checkmate! White wins!",
+                "timestamp": 1789657946033
+              },
+              "status": "completed"
+            }
+          ]
+        },
+        {
+          "roundNumber": 2,
+          "name": "Semifinals",
+          "matches": [
+            {
+              "id": "r2_m0",
+              "round": 2,
+              "matchIndex": 0,
+              "white": {
+                "id": "cx-gpt-56-sol",
+                "name": "GPT 5.6 Sol",
+                "provider": "openai",
+                "modelIdentifier": "cx/gpt-5.6-sol",
+                "avatar": "☀️",
+                "badgeColor": "#f59e0b",
+                "playStyle": "Bright tactical attacking, dynamic piece sacrifices",
+                "simulatedElo": 2680,
+                "description": "GPT 5.6 Sol model via local proxy endpoint."
+              },
+              "black": {
+                "id": "ag-gemini-36-flash-medium",
+                "name": "Gemini 3.6 Flash (Medium)",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.6-flash-medium",
+                "avatar": "💠",
+                "badgeColor": "#6366f1",
+                "playStyle": "Direct tactical calculation and aggressive initiative",
+                "simulatedElo": 2460,
+                "description": "Gemini 3.6 Flash Medium via local endpoint."
+              },
+              "winner": {
+                "id": "ag-gemini-36-flash-medium",
+                "name": "Gemini 3.6 Flash (Medium)",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.6-flash-medium",
+                "avatar": "💠",
+                "badgeColor": "#6366f1",
+                "playStyle": "Direct tactical calculation and aggressive initiative",
+                "simulatedElo": 2460,
+                "description": "Gemini 3.6 Flash Medium via local endpoint."
+              },
+              "result": {
+                "winner": "b",
+                "reason": "timeout",
+                "description": "White ran out of time!",
+                "timestamp": 1789658239146
+              },
+              "status": "completed"
+            },
+            {
+              "id": "r2_m1",
+              "round": 2,
+              "matchIndex": 1,
+              "white": {
+                "id": "ag-gemini-37-flash-medium",
+                "name": "Gemini 3.7 Flash (Medium)",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.7-flash-medium",
+                "avatar": "🔷",
+                "badgeColor": "#06b6d4",
+                "playStyle": "Dynamic piece coordination and tactical defense",
+                "simulatedElo": 2510,
+                "description": "Gemini 3.7 Flash Medium via local endpoint."
+              },
+              "black": {
+                "id": "ag-gemini-38-flash",
+                "name": "Gemini 3.8 Flash",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.8-flash",
+                "avatar": "⚡",
+                "badgeColor": "#38bdf8",
+                "playStyle": "Ultra-fast frontier tactician with live reasoning",
+                "simulatedElo": 2580,
+                "description": "Google Gemini 3.8 Flash via local proxy endpoint."
+              },
+              "winner": {
+                "id": "ag-gemini-37-flash-medium",
+                "name": "Gemini 3.7 Flash (Medium)",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.7-flash-medium",
+                "avatar": "🔷",
+                "badgeColor": "#06b6d4",
+                "playStyle": "Dynamic piece coordination and tactical defense",
+                "simulatedElo": 2510,
+                "description": "Gemini 3.7 Flash Medium via local endpoint."
+              },
+              "result": {
+                "winner": "w",
+                "reason": "resignation",
+                "description": "Black resigned.",
+                "timestamp": 1789658394318
+              },
+              "status": "completed"
+            }
+          ]
+        },
+        {
+          "roundNumber": 3,
+          "name": "Finals",
+          "matches": [
+            {
+              "id": "r3_m0",
+              "round": 3,
+              "matchIndex": 0,
+              "white": {
+                "id": "ag-gemini-36-flash-medium",
+                "name": "Gemini 3.6 Flash (Medium)",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.6-flash-medium",
+                "avatar": "💠",
+                "badgeColor": "#6366f1",
+                "playStyle": "Direct tactical calculation and aggressive initiative",
+                "simulatedElo": 2460,
+                "description": "Gemini 3.6 Flash Medium via local endpoint."
+              },
+              "black": {
+                "id": "ag-gemini-37-flash-medium",
+                "name": "Gemini 3.7 Flash (Medium)",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.7-flash-medium",
+                "avatar": "🔷",
+                "badgeColor": "#06b6d4",
+                "playStyle": "Dynamic piece coordination and tactical defense",
+                "simulatedElo": 2510,
+                "description": "Gemini 3.7 Flash Medium via local endpoint."
+              },
+              "winner": {
+                "id": "ag-gemini-36-flash-medium",
+                "name": "Gemini 3.6 Flash (Medium)",
+                "provider": "openai",
+                "modelIdentifier": "ag/gemini-3.6-flash-medium",
+                "avatar": "💠",
+                "badgeColor": "#6366f1",
+                "playStyle": "Direct tactical calculation and aggressive initiative",
+                "simulatedElo": 2460,
+                "description": "Gemini 3.6 Flash Medium via local endpoint."
+              },
+              "result": {
+                "winner": "w",
+                "reason": "resignation",
+                "description": "Black resigned.",
+                "timestamp": 1789658720213
+              },
+              "status": "completed"
+            }
+          ]
+        }
+      ],
+      "currentRoundIndex": 0,
+      "currentMatchIndex": 0,
+      "status": "completed",
+      "winner": {
+        "id": "ag-gemini-36-flash-medium",
+        "name": "Gemini 3.6 Flash (Medium)",
+        "provider": "openai",
+        "modelIdentifier": "ag/gemini-3.6-flash-medium",
+        "avatar": "💠",
+        "badgeColor": "#6366f1",
+        "playStyle": "Direct tactical calculation and aggressive initiative",
+        "simulatedElo": 2460,
+        "description": "Gemini 3.6 Flash Medium via local endpoint."
+      },
+      "standings": [
+        {
+          "modelId": "ag-gemini-36-flash-medium",
+          "modelName": "Gemini 3.6 Flash (Medium)",
+          "avatar": "💠",
+          "points": 9,
+          "played": 3,
+          "won": 3,
+          "drawn": 0,
+          "lost": 0,
+          "elo": 2460
+        },
+        {
+          "modelId": "ag-gemini-37-flash-medium",
+          "modelName": "Gemini 3.7 Flash (Medium)",
+          "avatar": "🔷",
+          "points": 6,
+          "played": 3,
+          "won": 2,
+          "drawn": 0,
+          "lost": 1,
+          "elo": 2510
+        },
+        {
+          "modelId": "ag-gemini-38-flash",
+          "modelName": "Gemini 3.8 Flash",
+          "avatar": "⚡",
+          "points": 3,
+          "played": 2,
+          "won": 1,
+          "drawn": 0,
+          "lost": 1,
+          "elo": 2580
+        },
+        {
+          "modelId": "cx-gpt-56-sol",
+          "modelName": "GPT 5.6 Sol",
+          "avatar": "☀️",
+          "points": 0,
+          "played": 1,
+          "won": 0,
+          "drawn": 0,
+          "lost": 1,
+          "elo": 2680
+        },
+        {
+          "modelId": "cx-gpt-55",
+          "modelName": "GPT 5.5",
+          "avatar": "⚡",
+          "points": 0,
+          "played": 1,
+          "won": 0,
+          "drawn": 0,
+          "lost": 1,
+          "elo": 2600
+        },
+        {
+          "modelId": "ag-claude-opus-46",
+          "modelName": "Claude Opus 4.6 (Thinking)",
+          "avatar": "🧠",
+          "points": 0,
+          "played": 1,
+          "won": 0,
+          "drawn": 0,
+          "lost": 1,
+          "elo": 2620
+        },
+        {
+          "modelId": "ag-claude-sonnet-46",
+          "modelName": "Claude Sonnet 4.6",
+          "avatar": "🟧",
+          "points": 0,
+          "played": 1,
+          "won": 0,
+          "drawn": 0,
+          "lost": 1,
+          "elo": 2560
+        }
+      ],
+      "modelIds": [
+        "cx-gpt-56-sol",
+        "cx-gpt-55",
+        "ag-gemini-38-flash",
+        "ag-claude-opus-46",
+        "ag-claude-sonnet-46",
+        "ag-gemini-37-flash-medium",
+        "ag-gemini-36-flash-medium"
+      ],
+      "updatedAt": 1789658720305,
+      "createdAt": 1789658720305
+    }
+  ],
   "models": {
     "cx-gpt-6-astra": {
       "modelId": "cx-gpt-6-astra",
@@ -140,7 +970,7 @@
           "elo": 2750,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         },
         {
           "elo": 2764,
@@ -154,11 +984,11 @@
       "modelId": "cx-gpt-56-sol",
       "modelName": "GPT 5.6 Sol",
       "provider": "openai",
-      "elo": 2666,
+      "elo": 2635,
       "peakElo": 2680,
-      "gamesPlayed": 1,
+      "gamesPlayed": 2,
       "wins": 0,
-      "losses": 1,
+      "losses": 2,
       "draws": 0,
       "illegalMoveAttempts": 0,
       "totalMovesMade": 0,
@@ -171,13 +1001,19 @@
           "elo": 2680,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         },
         {
           "elo": 2666,
           "matchId": "api_test_01",
           "delta": -14,
           "timestamp": 1789655645856
+        },
+        {
+          "elo": 2635,
+          "matchId": "match_1789657952556_16tm2",
+          "delta": -31,
+          "timestamp": 1789658239154
         }
       ]
     },
@@ -202,7 +1038,7 @@
           "elo": 2660,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         }
       ]
     },
@@ -210,12 +1046,12 @@
       "modelId": "cx-gpt-56-luna",
       "modelName": "GPT 5.6 Luna",
       "provider": "openai",
-      "elo": 2650,
+      "elo": 2628,
       "peakElo": 2650,
-      "gamesPlayed": 0,
+      "gamesPlayed": 2,
       "wins": 0,
-      "losses": 0,
-      "draws": 0,
+      "losses": 1,
+      "draws": 1,
       "illegalMoveAttempts": 0,
       "totalMovesMade": 0,
       "totalLatencyMs": 0,
@@ -227,7 +1063,19 @@
           "elo": 2650,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
+        },
+        {
+          "elo": 2649,
+          "matchId": "match_1789656778536_rj9qc",
+          "delta": -1,
+          "timestamp": 1789656934670
+        },
+        {
+          "elo": 2628,
+          "matchId": "match_1789657038218_0jycc",
+          "delta": -21,
+          "timestamp": 1789657169023
         }
       ]
     },
@@ -235,11 +1083,11 @@
       "modelId": "cx-gpt-55",
       "modelName": "GPT 5.5",
       "provider": "openai",
-      "elo": 2600,
+      "elo": 2573,
       "peakElo": 2600,
-      "gamesPlayed": 0,
+      "gamesPlayed": 1,
       "wins": 0,
-      "losses": 0,
+      "losses": 1,
       "draws": 0,
       "illegalMoveAttempts": 0,
       "totalMovesMade": 0,
@@ -252,7 +1100,13 @@
           "elo": 2600,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
+        },
+        {
+          "elo": 2573,
+          "matchId": "match_1789657512962_fvmb0",
+          "delta": -27,
+          "timestamp": 1789657786603
         }
       ]
     },
@@ -277,7 +1131,7 @@
           "elo": 2550,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         }
       ]
     },
@@ -302,7 +1156,7 @@
           "elo": 2480,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         }
       ]
     },
@@ -327,7 +1181,7 @@
           "elo": 2520,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         }
       ]
     },
@@ -335,12 +1189,12 @@
       "modelId": "ag-gemini-38-flash",
       "modelName": "Gemini 3.8 Flash",
       "provider": "openai",
-      "elo": 2596,
-      "peakElo": 2596,
-      "gamesPlayed": 1,
-      "wins": 1,
-      "losses": 0,
-      "draws": 0,
+      "elo": 2609,
+      "peakElo": 2633,
+      "gamesPlayed": 5,
+      "wins": 3,
+      "losses": 1,
+      "draws": 1,
       "illegalMoveAttempts": 0,
       "totalMovesMade": 0,
       "totalLatencyMs": 0,
@@ -352,13 +1206,37 @@
           "elo": 2580,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         },
         {
           "elo": 2596,
           "matchId": "test_match_1789655596483",
           "delta": 16,
           "timestamp": 1789655596484
+        },
+        {
+          "elo": 2597,
+          "matchId": "match_1789656778536_rj9qc",
+          "delta": 1,
+          "timestamp": 1789656934670
+        },
+        {
+          "elo": 2618,
+          "matchId": "match_1789657038218_0jycc",
+          "delta": 21,
+          "timestamp": 1789657169023
+        },
+        {
+          "elo": 2633,
+          "matchId": "match_1789657794600_xkme2",
+          "delta": 15,
+          "timestamp": 1789657946039
+        },
+        {
+          "elo": 2609,
+          "matchId": "match_1789658245856_abhoa",
+          "delta": -24,
+          "timestamp": 1789658394325
         }
       ]
     },
@@ -383,7 +1261,7 @@
           "elo": 2600,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         }
       ]
     },
@@ -391,11 +1269,11 @@
       "modelId": "ag-claude-opus-46",
       "modelName": "Claude Opus 4.6 (Thinking)",
       "provider": "openai",
-      "elo": 2620,
+      "elo": 2590,
       "peakElo": 2620,
-      "gamesPlayed": 0,
+      "gamesPlayed": 1,
       "wins": 0,
-      "losses": 0,
+      "losses": 1,
       "draws": 0,
       "illegalMoveAttempts": 0,
       "totalMovesMade": 0,
@@ -408,7 +1286,13 @@
           "elo": 2620,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
+        },
+        {
+          "elo": 2590,
+          "matchId": "match_1789657236035_48nbv",
+          "delta": -30,
+          "timestamp": 1789657490845
         }
       ]
     },
@@ -416,11 +1300,11 @@
       "modelId": "ag-claude-sonnet-46",
       "modelName": "Claude Sonnet 4.6",
       "provider": "openai",
-      "elo": 2560,
+      "elo": 2545,
       "peakElo": 2560,
-      "gamesPlayed": 0,
+      "gamesPlayed": 1,
       "wins": 0,
-      "losses": 0,
+      "losses": 1,
       "draws": 0,
       "illegalMoveAttempts": 0,
       "totalMovesMade": 0,
@@ -433,7 +1317,13 @@
           "elo": 2560,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
+        },
+        {
+          "elo": 2545,
+          "matchId": "match_1789657794600_xkme2",
+          "delta": -15,
+          "timestamp": 1789657946039
         }
       ]
     },
@@ -458,7 +1348,7 @@
           "elo": 2540,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         },
         {
           "elo": 2524,
@@ -472,14 +1362,14 @@
       "modelId": "ag-gemini-37-flash-medium",
       "modelName": "Gemini 3.7 Flash (Medium)",
       "provider": "openai",
-      "elo": 2505,
-      "peakElo": 2510,
-      "gamesPlayed": 1,
-      "wins": 0,
-      "losses": 0,
+      "elo": 2536,
+      "peakElo": 2556,
+      "gamesPlayed": 4,
+      "wins": 2,
+      "losses": 1,
       "draws": 1,
-      "illegalMoveAttempts": 31,
-      "totalMovesMade": 31,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
       "totalLatencyMs": 0,
       "totalToolCalls": 0,
       "forfeits": 0,
@@ -489,13 +1379,31 @@
           "elo": 2510,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         },
         {
           "elo": 2505,
           "matchId": "match_1789656056396_f545z",
           "delta": -5,
           "timestamp": 1789656240212
+        },
+        {
+          "elo": 2532,
+          "matchId": "match_1789657512962_fvmb0",
+          "delta": 27,
+          "timestamp": 1789657786603
+        },
+        {
+          "elo": 2556,
+          "matchId": "match_1789658245856_abhoa",
+          "delta": 24,
+          "timestamp": 1789658394325
+        },
+        {
+          "elo": 2536,
+          "matchId": "match_1789658417396_nit08",
+          "delta": -20,
+          "timestamp": 1789658720234
         }
       ]
     },
@@ -503,14 +1411,14 @@
       "modelId": "ag-gemini-36-flash-medium",
       "modelName": "Gemini 3.6 Flash (Medium)",
       "provider": "openai",
-      "elo": 2465,
-      "peakElo": 2465,
-      "gamesPlayed": 1,
-      "wins": 0,
+      "elo": 2546,
+      "peakElo": 2546,
+      "gamesPlayed": 4,
+      "wins": 3,
       "losses": 0,
       "draws": 1,
-      "illegalMoveAttempts": 30,
-      "totalMovesMade": 30,
+      "illegalMoveAttempts": 0,
+      "totalMovesMade": 0,
       "totalLatencyMs": 0,
       "totalToolCalls": 0,
       "forfeits": 0,
@@ -520,13 +1428,31 @@
           "elo": 2460,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         },
         {
           "elo": 2465,
           "matchId": "match_1789656056396_f545z",
           "delta": 5,
           "timestamp": 1789656240212
+        },
+        {
+          "elo": 2495,
+          "matchId": "match_1789657236035_48nbv",
+          "delta": 30,
+          "timestamp": 1789657490845
+        },
+        {
+          "elo": 2526,
+          "matchId": "match_1789657952556_16tm2",
+          "delta": 31,
+          "timestamp": 1789658239154
+        },
+        {
+          "elo": 2546,
+          "matchId": "match_1789658417396_nit08",
+          "delta": 20,
+          "timestamp": 1789658720234
         }
       ]
     },
@@ -551,7 +1477,7 @@
           "elo": 2420,
           "matchId": "initial",
           "delta": 0,
-          "timestamp": 1789655661360
+          "timestamp": 1789658786078
         }
       ]
     }

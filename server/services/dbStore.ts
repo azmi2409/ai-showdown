@@ -32,6 +32,10 @@ const BASELINE_MODELS: { id: string; name: string; provider: string; elo: number
   { id: 'ag-gemini-37-flash-medium', name: 'Gemini 3.7 Flash (Medium)', provider: 'openai', elo: 2510 },
   { id: 'ag-gemini-36-flash-medium', name: 'Gemini 3.6 Flash (Medium)', provider: 'openai', elo: 2460 },
   { id: 'ag-gemini-3-flash', name: 'Gemini 3 Flash', provider: 'openai', elo: 2420 },
+  { id: 'algo-minimax-alpha-beta', name: 'Stockfish Mini (Minimax α-β)', provider: 'algorithm', elo: 2100 },
+  { id: 'algo-positional-maestro', name: 'Positional Maestro (Piece-Square)', provider: 'algorithm', elo: 1650 },
+  { id: 'algo-greedy-tactician', name: 'Greedy Tactician (Material Hunter)', provider: 'algorithm', elo: 1450 },
+  { id: 'algo-random-walker', name: 'Random Walker (Baseline Bot)', provider: 'algorithm', elo: 800 },
 ];
 
 export class DbStore {

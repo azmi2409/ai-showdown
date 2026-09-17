@@ -2,6 +2,7 @@ import { ApiKeysConfig, GameResult, ModelConfig, NeuralLogEntry, ToolCallEntry }
 import { audioService } from './audioService';
 import { CHESS_TOOLS } from './chessTools';
 import { GameStateStore } from './GameStateStore';
+import { AlgorithmEngine } from './algorithmEngine';
 import { AnthropicProvider } from './providers/AnthropicProvider';
 import { OpenAIProvider } from './providers/OpenAIProvider';
 import { SimulatedProvider } from './providers/SimulatedProvider';
@@ -178,161 +179,224 @@ export class GameOrchestrator {
       const turnStartTime = performance.now();
       let capturedReasoning = '';
 
-      while (!moveSuccessfullyMade && retries < MAX_RETRIES) {
-        if (this.store.getStatus() !== 'active' || this.isPaused) break;
+      if (
+        AlgorithmEngine.isAlgorithmModel(currentModel.modelIdentifier) ||
+        currentModel.provider === 'algorithm'
+      ) {
+        // --- Non-LLM Algorithm Bot Execution ---
+        const algoResult = AlgorithmEngine.computeMove(
+          currentModel.modelIdentifier,
+          this.store.getChess()
+        );
+        capturedReasoning = algoResult.reasoning;
 
-        try {
-          const memory = this.store.getMemory(turn);
-          const response = await provider.sendTurn(
-            memory,
-            CHESS_TOOLS,
-            currentModel.modelIdentifier,
-            apiKey,
-            baseUrl,
-            (chunk) => {
-              if (chunk.thinking || chunk.text) {
-                capturedReasoning = chunk.text || chunk.thinking || '';
-                this.store.setActiveThinking({
-                  side: turn,
-                  modelName: currentModel.name,
-                  thoughtText: capturedReasoning,
-                });
+        this.store.setActiveThinking({
+          side: turn,
+          modelName: currentModel.name,
+          thoughtText: algoResult.reasoning,
+        });
+
+        const thinkDelay =
+          this.speedMode === 'instant' ? 40 : this.speedMode === '0.5s' ? 300 : 700;
+        await new Promise((resolve) => setTimeout(resolve, thinkDelay));
+
+        const exec = this.store.applyMove(algoResult.san, {
+          reasoning: algoResult.reasoning,
+          latencyMs: algoResult.latencyMs,
+          toolCallsCount: 1,
+        });
+
+        if (exec.success) {
+          moveSuccessfullyMade = true;
+          toolCallEntries.push({
+            id: `call_${Date.now()}_algo`,
+            name: 'make_move',
+            arguments: { move: algoResult.san, reasoning: algoResult.reasoning },
+            result: { success: true, move: algoResult.san },
+            latencyMs: algoResult.latencyMs,
+            timestamp: Date.now(),
+          });
+
+          // Sound effects
+          if (exec.moveRecord?.captured) {
+            audioService.playCapture();
+          } else {
+            audioService.playMove();
+          }
+
+          if (this.store.isCheckmate()) {
+            audioService.playCheckmate();
+          } else if (this.store.isCheck()) {
+            audioService.playCheck();
+          }
+
+          // Notify opponent of the move with their legal moves
+          const opponent = turn === 'w' ? 'b' : 'w';
+          const opponentLegalMoves = this.store.getLegalMoves();
+          this.store.appendMemory(opponent, {
+            role: 'user',
+            content: `Your opponent played: ${exec.moveRecord?.san}. Current position (FEN): ${this.store.getFEN()}.\nLegal moves available: ${opponentLegalMoves.join(
+              ', '
+            )}.\nIt is your turn. Invoke make_move with your chosen move from the list and your strategic reasoning.`,
+          });
+        }
+      } else {
+        while (!moveSuccessfullyMade && retries < MAX_RETRIES) {
+          if (this.store.getStatus() !== 'active' || this.isPaused) break;
+
+          try {
+            const memory = this.store.getMemory(turn);
+            const response = await provider.sendTurn(
+              memory,
+              CHESS_TOOLS,
+              currentModel.modelIdentifier,
+              apiKey,
+              baseUrl,
+              (chunk) => {
+                if (chunk.thinking || chunk.text) {
+                  capturedReasoning = chunk.text || chunk.thinking || '';
+                  this.store.setActiveThinking({
+                    side: turn,
+                    modelName: currentModel.name,
+                    thoughtText: capturedReasoning,
+                  });
+                }
               }
+            );
+
+            this.store.appendMemory(turn, response.rawAssistantMessage);
+
+            if (response.textContent && !capturedReasoning) {
+              capturedReasoning = response.textContent;
+              this.store.setActiveThinking({
+                side: turn,
+                modelName: currentModel.name,
+                thoughtText: response.textContent,
+              });
             }
-          );
 
-          this.store.appendMemory(turn, response.rawAssistantMessage);
+            if (response.toolCalls.length === 0) {
+              // Model returned raw text without calling tools
+              retries++;
+              illegalAttemptsThisTurn++;
+              this.store.incrementIllegalAttempts(turn);
+              const legalMoves = this.store.getLegalMoves();
+              this.store.appendMemory(turn, {
+                role: 'user',
+                content: `Error: You must invoke the make_move tool. Available legal moves: ${legalMoves.join(
+                  ', '
+                )}. Example: call make_move with {"move":"${legalMoves[0]}"}.`,
+              });
+              continue;
+            }
 
-          if (response.textContent && !capturedReasoning) {
-            capturedReasoning = response.textContent;
-            this.store.setActiveThinking({
-              side: turn,
-              modelName: currentModel.name,
-              thoughtText: response.textContent,
-            });
-          }
+            // Process tool calls
+            for (const tc of response.toolCalls) {
+              const toolCallStart = performance.now();
+              let toolResult: any;
 
-          if (response.toolCalls.length === 0) {
-            // Model returned raw text without calling tools
-            retries++;
-            illegalAttemptsThisTurn++;
-            this.store.incrementIllegalAttempts(turn);
-            const legalMoves = this.store.getLegalMoves();
-            this.store.appendMemory(turn, {
-              role: 'user',
-              content: `Error: You must invoke the make_move tool. Available legal moves: ${legalMoves.join(
-                ', '
-              )}. Example: call make_move with {"move":"${legalMoves[0]}"}.`,
-            });
-            continue;
-          }
+              if (tc.name === 'make_move') {
+                const moveArg = tc.arguments.move || '';
+                const reasoningArg = tc.arguments.reasoning || capturedReasoning || '';
+                if (reasoningArg && !capturedReasoning) {
+                  capturedReasoning = reasoningArg;
+                }
 
-          // Process tool calls
-          for (const tc of response.toolCalls) {
-            const toolCallStart = performance.now();
-            let toolResult: any;
+                const exec = this.store.applyMove(moveArg, {
+                  reasoning: reasoningArg,
+                  latencyMs: Math.round(performance.now() - turnStartTime),
+                  toolCallsCount: toolCallEntries.length + 1,
+                });
 
-            if (tc.name === 'make_move') {
-              const moveArg = tc.arguments.move || '';
-              const reasoningArg = tc.arguments.reasoning || capturedReasoning || '';
-              if (reasoningArg && !capturedReasoning) {
-                capturedReasoning = reasoningArg;
+                if (exec.success) {
+                  moveSuccessfullyMade = true;
+                  toolResult = {
+                    success: true,
+                    move_played: exec.moveRecord?.san,
+                    board_fen: this.store.getFEN(),
+                  };
+
+                  // Sound effects
+                  if (exec.moveRecord?.captured) {
+                    audioService.playCapture();
+                  } else {
+                    audioService.playMove();
+                  }
+
+                  if (this.store.isCheckmate()) {
+                    audioService.playCheckmate();
+                  } else if (this.store.isCheck()) {
+                    audioService.playCheck();
+                  }
+
+                  // Notify opponent of the move with their legal moves
+                  const opponent = turn === 'w' ? 'b' : 'w';
+                  const opponentLegalMoves = this.store.getLegalMoves();
+                  this.store.appendMemory(opponent, {
+                    role: 'user',
+                    content: `Your opponent played: ${exec.moveRecord?.san}. Current position (FEN): ${this.store.getFEN()}.\nLegal moves available: ${opponentLegalMoves.join(
+                      ', '
+                    )}.\nIt is your turn. Invoke make_move with your chosen move from the list and your strategic reasoning.`,
+                  });
+                } else {
+                  retries++;
+                  illegalAttemptsThisTurn++;
+                  this.store.incrementIllegalAttempts(turn);
+                  toolResult = {
+                    success: false,
+                    error: exec.error,
+                    legal_moves: this.store.getLegalMoves(),
+                  };
+                  const legalMoves = this.store.getLegalMoves();
+                  // Prompt with legal moves for retry
+                  this.store.appendMemory(turn, {
+                    role: 'user',
+                    content: `Move rejected: "${moveArg}" is not legal. You MUST choose one of the following legal moves: ${legalMoves.join(
+                      ', '
+                    )}. Call make_move now.`,
+                  });
+                }
+              } else if (tc.name === 'get_board_state') {
+                toolResult = {
+                  fen: this.store.getFEN(),
+                  move_history: this.store.getMoves().map((m) => m.san),
+                  material: this.store.getMaterialBalance(),
+                  clocks: this.store.getClocks(),
+                  turn: this.store.getTurn() === 'w' ? 'White' : 'Black',
+                };
+              } else if (tc.name === 'get_legal_moves') {
+                toolResult = {
+                  legal_moves: this.store.getLegalMoves(),
+                };
+              } else if (tc.name === 'resign') {
+                this.store.forfeit(turn, 'resignation');
+                toolResult = { resigned: true };
+                break;
               }
 
-              const exec = this.store.applyMove(moveArg, {
-                reasoning: reasoningArg,
-                latencyMs: Math.round(performance.now() - turnStartTime),
-                toolCallsCount: toolCallEntries.length + 1,
+              const toolLatency = Math.round(performance.now() - toolCallStart);
+              toolCallEntries.push({
+                id: tc.id,
+                name: tc.name,
+                arguments: tc.arguments,
+                result: toolResult,
+                latencyMs: toolLatency,
+                timestamp: Date.now(),
               });
 
-              if (exec.success) {
-                moveSuccessfullyMade = true;
-                toolResult = {
-                  success: true,
-                  move_played: exec.moveRecord?.san,
-                  board_fen: this.store.getFEN(),
-                };
+              // Append tool result into agent memory
+              this.store.appendMemory(turn, provider.formatToolResult(tc.id, toolResult));
 
-                // Sound effects
-                if (exec.moveRecord?.captured) {
-                  audioService.playCapture();
-                } else {
-                  audioService.playMove();
-                }
-
-                if (this.store.isCheckmate()) {
-                  audioService.playCheckmate();
-                } else if (this.store.isCheck()) {
-                  audioService.playCheck();
-                }
-
-                // Notify opponent of the move with their legal moves
-                const opponent = turn === 'w' ? 'b' : 'w';
-                const opponentLegalMoves = this.store.getLegalMoves();
-                this.store.appendMemory(opponent, {
-                  role: 'user',
-                  content: `Your opponent played: ${exec.moveRecord?.san}. Current position (FEN): ${this.store.getFEN()}.\nLegal moves available: ${opponentLegalMoves.join(
-                    ', '
-                  )}.\nIt is your turn. Invoke make_move with your chosen move from the list and your strategic reasoning.`,
-                });
-              } else {
-                retries++;
-                illegalAttemptsThisTurn++;
-                this.store.incrementIllegalAttempts(turn);
-                const legalMoves = this.store.getLegalMoves();
-                toolResult = {
-                  success: false,
-                  error: exec.error,
-                  legal_moves: legalMoves,
-                };
-                // Prompt with legal moves for retry
-                this.store.appendMemory(turn, {
-                  role: 'user',
-                  content: `Move rejected: "${moveArg}" is not legal. You MUST choose one of the following legal moves: ${legalMoves.join(
-                    ', '
-                  )}. Call make_move now.`,
-                });
-              }
-            } else if (tc.name === 'get_board_state') {
-              toolResult = {
-                fen: this.store.getFEN(),
-                move_history: this.store.getMoves().map((m) => m.san),
-                material: this.store.getMaterialBalance(),
-                clocks: this.store.getClocks(),
-                turn: this.store.getTurn() === 'w' ? 'White' : 'Black',
-              };
-            } else if (tc.name === 'get_legal_moves') {
-              toolResult = {
-                legal_moves: this.store.getLegalMoves(),
-              };
-            } else if (tc.name === 'resign') {
-              this.store.forfeit(turn, 'resignation');
-              toolResult = { resigned: true };
+              if (moveSuccessfullyMade) break;
+            }
+          } catch (err: any) {
+            console.error(`Agent error (${currentModel.name}):`, err);
+            retries++;
+            if (retries >= MAX_RETRIES) {
               break;
             }
-
-            const toolLatency = Math.round(performance.now() - toolCallStart);
-            toolCallEntries.push({
-              id: tc.id,
-              name: tc.name,
-              arguments: tc.arguments,
-              result: toolResult,
-              latencyMs: toolLatency,
-              timestamp: Date.now(),
-            });
-
-            // Append tool result into agent memory
-            this.store.appendMemory(turn, provider.formatToolResult(tc.id, toolResult));
-
-            if (moveSuccessfullyMade) break;
+            await new Promise((resolve) => setTimeout(resolve, 500));
           }
-        } catch (err: any) {
-          console.error(`Agent error (${currentModel.name}):`, err);
-          retries++;
-          if (retries >= MAX_RETRIES) {
-            break;
-          }
-          await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
 

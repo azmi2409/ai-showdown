@@ -1,5 +1,6 @@
 export type ModelProvider =
   | 'simulated'
+  | 'algorithm'
   | 'openrouter'
   | 'openai'
   | 'anthropic'

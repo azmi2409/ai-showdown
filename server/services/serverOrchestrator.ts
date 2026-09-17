@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js';
 import { CHESS_TOOLS } from '../../src/services/chessTools';
 import { OpenAIProvider } from '../../src/services/providers/OpenAIProvider';
+import { AlgorithmEngine } from '../../src/services/algorithmEngine';
 import {
   ConversationMessage,
   GameResult,
@@ -347,176 +348,211 @@ export class ServerOrchestrator {
         const turnStartTime = performance.now();
         let capturedReasoning = '';
 
-        while (!moveSuccessfullyMade && retries < MAX_RETRIES) {
-          if (this.status !== 'active' || this.isPaused) break;
+        if (AlgorithmEngine.isAlgorithmModel(currentModel.modelIdentifier) || currentModel.provider === 'algorithm') {
+          // --- Non-LLM Algorithm Bot Execution (100% Offline & Deterministic) ---
+          const algoResult = AlgorithmEngine.computeMove(currentModel.modelIdentifier, this.chess);
+          capturedReasoning = algoResult.reasoning;
 
-          try {
-            const memory = this.agentMemory[turn];
-            const response = await provider.sendTurn(
-              memory,
-              CHESS_TOOLS,
-              currentModel.modelIdentifier,
-              undefined,
-              'http://localhost:20128/v1',
-              (chunk) => {
-                if (chunk.thinking || chunk.text) {
-                  capturedReasoning = chunk.text || chunk.thinking || '';
-                  this.activeThinking = {
-                    side: turn,
-                    modelName: currentModel.name,
-                    thoughtText: capturedReasoning,
-                  };
-                  sseHub.broadcast('thought', this.activeThinking);
-                } else if (chunk.toolArgs) {
-                  try {
-                    const match = chunk.toolArgs.match(/"reasoning"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)/);
-                    if (match && match[1]) {
-                      const extracted = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
-                      capturedReasoning = extracted;
-                      this.activeThinking = {
-                        side: turn,
-                        modelName: currentModel.name,
-                        thoughtText: capturedReasoning,
-                      };
-                      sseHub.broadcast('thought', this.activeThinking);
-                    }
-                  } catch {}
+          this.activeThinking = {
+            side: turn,
+            modelName: currentModel.name,
+            thoughtText: algoResult.reasoning,
+          };
+          sseHub.broadcast('thought', this.activeThinking);
+
+          // Simulated thinking pace based on speed mode
+          const thinkDelay =
+            this.speedMode === 'instant' ? 40 : this.speedMode === '0.5s' ? 300 : 700;
+          await new Promise((resolve) => setTimeout(resolve, thinkDelay));
+
+          const exec = this.applyMove(algoResult.san, {
+            reasoning: algoResult.reasoning,
+            latencyMs: algoResult.latencyMs,
+            toolCallsCount: 1,
+          });
+
+          if (exec.success) {
+            moveSuccessfullyMade = true;
+
+            // Increment clock increment
+            this.clocks[turn] += this.timeControl.incrementSeconds * 1000;
+
+            // Broadcast Move Event
+            sseHub.broadcast('move', {
+              moveRecord: exec.moveRecord,
+              fen: this.chess.fen(),
+              clocks: this.clocks,
+              captures: this.captures,
+              turn: this.chess.turn(),
+              inCheck: this.chess.inCheck(),
+              isCheckmate: this.chess.isCheckmate(),
+              isGameOver: this.chess.isGameOver(),
+            });
+
+            toolCallEntries.push({
+              id: `call_${Date.now()}_algo`,
+              name: 'make_move',
+              arguments: { move: algoResult.san, reasoning: algoResult.reasoning },
+              result: { success: true, move: algoResult.san },
+              latencyMs: algoResult.latencyMs,
+              timestamp: Date.now(),
+            });
+          }
+        } else {
+          // --- LLM Network API Turn Execution ---
+          while (!moveSuccessfullyMade && retries < MAX_RETRIES) {
+            if (this.status !== 'active' || this.isPaused) break;
+
+            try {
+              const memory = this.agentMemory[turn];
+              const response = await provider.sendTurn(
+                memory,
+                CHESS_TOOLS,
+                currentModel.modelIdentifier,
+                undefined,
+                'http://localhost:20128/v1',
+                (chunk) => {
+                  if (chunk.thinking || chunk.text) {
+                    capturedReasoning = chunk.text || chunk.thinking || '';
+                    this.activeThinking = {
+                      side: turn,
+                      modelName: currentModel.name,
+                      thoughtText: capturedReasoning,
+                    };
+                    sseHub.broadcast('thought', this.activeThinking);
+                  } else if (chunk.toolArgs) {
+                    try {
+                      const match = chunk.toolArgs.match(/"reasoning"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)/);
+                      if (match && match[1]) {
+                        const extracted = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+                        capturedReasoning = extracted;
+                        this.activeThinking = {
+                          side: turn,
+                          modelName: currentModel.name,
+                          thoughtText: capturedReasoning,
+                        };
+                        sseHub.broadcast('thought', this.activeThinking);
+                      }
+                    } catch {}
+                  }
                 }
+              );
+
+              this.agentMemory[turn].push(response.rawAssistantMessage);
+
+              // Extract reasoning from tool calls if not already captured
+              const toolReasoning = response.toolCalls
+                .map((tc) => tc.arguments?.reasoning)
+                .find(Boolean);
+
+              if (toolReasoning && !capturedReasoning) {
+                capturedReasoning = toolReasoning;
+              } else if (response.textContent && !capturedReasoning) {
+                capturedReasoning = response.textContent;
               }
-            );
 
-            this.agentMemory[turn].push(response.rawAssistantMessage);
+              if (capturedReasoning) {
+                this.activeThinking = {
+                  side: turn,
+                  modelName: currentModel.name,
+                  thoughtText: capturedReasoning,
+                };
+                sseHub.broadcast('thought', this.activeThinking);
+              }
 
-            // Extract reasoning from tool calls if not already captured
-            const toolReasoning = response.toolCalls
-              .map((tc) => tc.arguments?.reasoning)
-              .find(Boolean);
+              if (response.toolCalls.length === 0) {
+                retries++;
+                illegalAttemptsThisTurn++;
+                this.illegalAttempts[turn]++;
+                const legalMoves = this.chess.moves();
+                this.agentMemory[turn].push({
+                  role: 'user',
+                  content: `Error: You must invoke the make_move tool. Available legal moves: ${legalMoves.join(
+                    ', '
+                  )}. Example: call make_move with {"move":"${legalMoves[0]}"}.`,
+                });
+                continue;
+              }
 
-            if (toolReasoning && !capturedReasoning) {
-              capturedReasoning = toolReasoning;
-            } else if (response.textContent && !capturedReasoning) {
-              capturedReasoning = response.textContent;
-            }
+              for (const tc of response.toolCalls) {
+                const toolCallStart = performance.now();
+                let toolResult: any;
 
-            if (capturedReasoning) {
-              this.activeThinking = {
-                side: turn,
-                modelName: currentModel.name,
-                thoughtText: capturedReasoning,
-              };
-              sseHub.broadcast('thought', this.activeThinking);
-            }
+                if (tc.name === 'make_move') {
+                  const moveArg = tc.arguments.move || '';
+                  const reasoningArg = tc.arguments.reasoning || capturedReasoning || '';
+                  if (reasoningArg && !capturedReasoning) capturedReasoning = reasoningArg;
 
-            if (response.toolCalls.length === 0) {
-              retries++;
-              illegalAttemptsThisTurn++;
-              this.illegalAttempts[turn]++;
-              const legalMoves = this.chess.moves();
-              this.agentMemory[turn].push({
-                role: 'user',
-                content: `Error: You must invoke the make_move tool. Available legal moves: ${legalMoves.join(
-                  ', '
-                )}. Example: call make_move with {"move":"${legalMoves[0]}"}.`,
-              });
-              continue;
-            }
+                  const exec = this.applyMove(moveArg, {
+                    reasoning: reasoningArg,
+                    latencyMs: Math.round(performance.now() - turnStartTime),
+                    toolCallsCount: toolCallEntries.length + 1,
+                  });
 
-            for (const tc of response.toolCalls) {
-              const toolCallStart = performance.now();
-              let toolResult: any;
+                  if (exec.success) {
+                    moveSuccessfullyMade = true;
+                    toolResult = {
+                      success: true,
+                      move_played: exec.moveRecord?.san,
+                      board_fen: this.chess.fen(),
+                    };
 
-              if (tc.name === 'make_move') {
-                const moveArg = tc.arguments.move || '';
-                const reasoningArg = tc.arguments.reasoning || capturedReasoning || '';
-                if (reasoningArg && !capturedReasoning) capturedReasoning = reasoningArg;
+                    // Increment clock increment
+                    this.clocks[turn] += this.timeControl.incrementSeconds * 1000;
 
-                const exec = this.applyMove(moveArg, {
-                  reasoning: reasoningArg,
-                  latencyMs: Math.round(performance.now() - turnStartTime),
-                  toolCallsCount: toolCallEntries.length + 1,
+                    // Broadcast Move Event
+                    sseHub.broadcast('move', {
+                      moveRecord: exec.moveRecord,
+                      fen: this.chess.fen(),
+                      clocks: this.clocks,
+                      captures: this.captures,
+                      turn: this.chess.turn(),
+                      inCheck: this.chess.inCheck(),
+                      isCheckmate: this.chess.isCheckmate(),
+                      isGameOver: this.chess.isGameOver(),
+                    });
+                  } else {
+                    retries++;
+                    illegalAttemptsThisTurn++;
+                    this.illegalAttempts[turn]++;
+                    toolResult = {
+                      error: exec.error,
+                      legal_moves: this.chess.moves(),
+                    };
+                  }
+                } else if (tc.name === 'get_board_state') {
+                  toolResult = {
+                    fen: this.chess.fen(),
+                    turn: this.chess.turn(),
+                    in_check: this.chess.inCheck(),
+                    legal_moves: this.chess.moves(),
+                  };
+                } else if (tc.name === 'get_legal_moves') {
+                  toolResult = { legal_moves: this.chess.moves() };
+                } else if (tc.name === 'resign') {
+                  this.forfeitMatch(turn);
+                  toolResult = { resigned: true };
+                  break;
+                }
+
+                const toolLatency = Math.round(performance.now() - toolCallStart);
+                toolCallEntries.push({
+                  id: tc.id,
+                  name: tc.name,
+                  arguments: tc.arguments,
+                  result: toolResult,
+                  latencyMs: toolLatency,
+                  timestamp: Date.now(),
                 });
 
-                if (exec.success) {
-                  moveSuccessfullyMade = true;
-                  toolResult = {
-                    success: true,
-                    move_played: exec.moveRecord?.san,
-                    board_fen: this.chess.fen(),
-                  };
-
-                  // Increment clock increment
-                  this.clocks[turn] += this.timeControl.incrementSeconds * 1000;
-
-                  // Broadcast Move Event
-                  sseHub.broadcast('move', {
-                    moveRecord: exec.moveRecord,
-                    fen: this.chess.fen(),
-                    clocks: this.clocks,
-                    captures: this.captures,
-                    turn: this.chess.turn(),
-                    inCheck: this.chess.inCheck(),
-                    isCheckmate: this.chess.isCheckmate(),
-                    isGameOver: this.chess.isGameOver(),
-                  });
-
-                  // Notify Opponent
-                  const opponent = turn === 'w' ? 'b' : 'w';
-                  const opponentLegalMoves = this.chess.moves();
-                  this.agentMemory[opponent].push({
-                    role: 'user',
-                    content: `Your opponent played: ${exec.moveRecord?.san}. Current position (FEN): ${this.chess.fen()}.\nLegal moves available: ${opponentLegalMoves.join(
-                      ', '
-                    )}.\nIt is your turn. Invoke make_move with your chosen move and strategic reasoning.`,
-                  });
-                } else {
-                  retries++;
-                  illegalAttemptsThisTurn++;
-                  this.illegalAttempts[turn]++;
-                  const legalMoves = this.chess.moves();
-                  toolResult = {
-                    success: false,
-                    error: exec.error,
-                    legal_moves: legalMoves,
-                  };
-                  this.agentMemory[turn].push({
-                    role: 'user',
-                    content: `Move rejected: "${moveArg}" is not legal. You MUST choose one of the following legal moves: ${legalMoves.join(
-                      ', '
-                    )}. Call make_move now.`,
-                  });
-                }
-              } else if (tc.name === 'get_board_state') {
-                toolResult = {
-                  fen: this.chess.fen(),
-                  move_history: this.moves.map((m) => m.san),
-                  clocks: this.clocks,
-                  turn: this.chess.turn() === 'w' ? 'White' : 'Black',
-                };
-              } else if (tc.name === 'get_legal_moves') {
-                toolResult = { legal_moves: this.chess.moves() };
-              } else if (tc.name === 'resign') {
-                this.forfeitMatch(turn);
-                toolResult = { resigned: true };
-                break;
+                this.agentMemory[turn].push(provider.formatToolResult(tc.id, toolResult));
+                if (moveSuccessfullyMade) break;
               }
-
-              const toolLatency = Math.round(performance.now() - toolCallStart);
-              toolCallEntries.push({
-                id: tc.id,
-                name: tc.name,
-                arguments: tc.arguments,
-                result: toolResult,
-                latencyMs: toolLatency,
-                timestamp: Date.now(),
-              });
-
-              this.agentMemory[turn].push(provider.formatToolResult(tc.id, toolResult));
-              if (moveSuccessfullyMade) break;
+            } catch (err: any) {
+              console.error(`Backend Agent error (${currentModel.name}):`, err.message);
+              retries++;
+              await new Promise((resolve) => setTimeout(resolve, 500));
             }
-          } catch (err: any) {
-            console.error(`Backend Agent error (${currentModel.name}):`, err.message);
-            retries++;
-            await new Promise((resolve) => setTimeout(resolve, 500));
           }
         }
 

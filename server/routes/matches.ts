@@ -21,7 +21,8 @@ matchesRouter.get('/', (req: Request, res: Response) => {
 // GET /api/matches/:id
 matchesRouter.get('/:id', (req: Request, res: Response) => {
   try {
-    const match = dbStore.getMatchById(req.params.id);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const match = dbStore.getMatchById(id);
     if (!match) {
       return res.status(404).json({ success: false, error: 'Match not found' });
     }
