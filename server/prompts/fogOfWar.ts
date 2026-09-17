@@ -1,4 +1,5 @@
-import { SystemPromptParams, TurnPromptParams, formatClockBlock } from './types';
+import type { SystemPromptParams, TurnPromptParams } from './types';
+import { formatClockBlock } from './types';
 
 export function buildFogOfWarSystemPrompt(params: SystemPromptParams): string {
   return `You are a supreme commander playing as ${params.color} against ${params.opponentName} in KRIEGSPIEL / FOG OF WAR CHESS!

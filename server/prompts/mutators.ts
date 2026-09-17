@@ -1,5 +1,6 @@
 import { AVAILABLE_MODIFIERS } from '../../src/types';
-import { SystemPromptParams, TurnPromptParams, formatClockBlock } from './types';
+import type { SystemPromptParams, TurnPromptParams } from './types';
+import { formatClockBlock } from './types';
 
 export function buildMutatorsSystemPrompt(params: SystemPromptParams): string {
   const myModDesc = (params.myModifiers || [])

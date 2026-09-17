@@ -1,4 +1,5 @@
-import { SystemPromptParams, TurnPromptParams, formatClockBlock } from './types';
+import type { SystemPromptParams, TurnPromptParams } from './types';
+import { formatClockBlock } from './types';
 
 export function buildCrazyhouseSystemPrompt(params: SystemPromptParams): string {
   return `You are a hyper-aggressive Grandmaster playing as ${params.color} against ${params.opponentName} in CRAZYHOUSE CHESS!
