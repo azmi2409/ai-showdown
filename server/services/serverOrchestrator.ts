@@ -1,15 +1,17 @@
-import { Chess } from 'chess.js';
+import { Chess, Square } from 'chess.js';
 import { CHESS_TOOLS } from '../../src/services/chessTools';
 import { OpenAIProvider } from '../../src/services/providers/OpenAIProvider';
 import { AlgorithmEngine } from '../../src/services/algorithmEngine';
 import {
   ConversationMessage,
+  GameMode,
   GameResult,
   ModelConfig,
   MoveRecord,
   NeuralLogEntry,
   TimeControl,
   ToolCallEntry,
+  AVAILABLE_MODIFIERS,
 } from '../../src/types';
 import { dbStore } from './dbStore';
 import { sseHub } from './sseHub';
@@ -25,6 +27,11 @@ export interface GameStateSnapshot {
   blackModel: ModelConfig;
   timeControl: TimeControl;
   speedMode: SpeedMode;
+  gameMode: GameMode;
+  whiteModifiers: string[];
+  blackModifiers: string[];
+  portalSquares?: [string, string];
+  fogVision?: { w: string[]; b: string[] };
   fen: string;
   turn: 'w' | 'b';
   clocks: { w: number; b: number };
@@ -37,6 +44,107 @@ export interface GameStateSnapshot {
   activeThinking: { side: 'w' | 'b' | null; modelName: string; thoughtText?: string };
 }
 
+function computeFogVision(chess: Chess): { w: string[]; b: string[] } {
+  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const board = chess.board();
+  const vision: { w: Set<string>; b: Set<string> } = { w: new Set(), b: new Set() };
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+      if (!piece) continue;
+      const color = piece.color;
+      const sq = `${files[c]}${8 - r}`;
+      vision[color].add(sq);
+
+      // Add sight lines / attacked squares
+      if (piece.type === 'p') {
+        const forwardRow = color === 'w' ? r - 1 : r + 1;
+        if (forwardRow >= 0 && forwardRow < 8) {
+          vision[color].add(`${files[c]}${8 - forwardRow}`);
+          if (c > 0) vision[color].add(`${files[c - 1]}${8 - forwardRow}`);
+          if (c < 7) vision[color].add(`${files[c + 1]}${8 - forwardRow}`);
+        }
+      } else if (piece.type === 'n') {
+        const offsets = [
+          [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+          [1, -2], [1, 2], [2, -1], [2, 1],
+        ];
+        for (const [dr, dc] of offsets) {
+          const nr = r + dr;
+          const nc = c + dc;
+          if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+            vision[color].add(`${files[nc]}${8 - nr}`);
+          }
+        }
+      } else if (piece.type === 'k') {
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            const nr = r + dr;
+            const nc = c + dc;
+            if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+              vision[color].add(`${files[nc]}${8 - nr}`);
+            }
+          }
+        }
+      } else {
+        const dirs: [number, number][] = [];
+        if (piece.type === 'r' || piece.type === 'q') {
+          dirs.push([-1, 0], [1, 0], [0, -1], [0, 1]);
+        }
+        if (piece.type === 'b' || piece.type === 'q') {
+          dirs.push([-1, -1], [-1, 1], [1, -1], [1, 1]);
+        }
+        for (const [dr, dc] of dirs) {
+          let step = 1;
+          while (true) {
+            const nr = r + dr * step;
+            const nc = c + dc * step;
+            if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8) break;
+            const targetSq = `${files[nc]}${8 - nr}`;
+            vision[color].add(targetSq);
+            if (board[nr][nc]) break;
+            step++;
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    w: Array.from(vision.w),
+    b: Array.from(vision.b),
+  };
+}
+
+function formatFogBoard(chess: Chess, color: 'w' | 'b', visibleSquares: string[]): string {
+  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const board = chess.board();
+  const visSet = new Set(visibleSquares);
+  const rows: string[] = [];
+
+  for (let r = 0; r < 8; r++) {
+    const rankNum = 8 - r;
+    const cells: string[] = [];
+    for (let c = 0; c < 8; c++) {
+      const sq = `${files[c]}${rankNum}`;
+      if (!visSet.has(sq)) {
+        cells.push('[?]');
+      } else {
+        const p = board[r][c];
+        if (!p) {
+          cells.push('[ ]');
+        } else {
+          cells.push(`[${p.color === 'w' ? p.type.toUpperCase() : p.type.toLowerCase()}]`);
+        }
+      }
+    }
+    rows.push(`${rankNum}  ${cells.join(' ')}`);
+  }
+  rows.push('    a   b   c   d   e   f   g   h');
+  return rows.join('\n');
+}
+
 function formatClockTime(ms: number): string {
   const totalSec = Math.max(0, Math.floor(ms / 1000));
   const min = Math.floor(totalSec / 60);
@@ -44,8 +152,46 @@ function formatClockTime(ms: number): string {
   return `${min}m ${sec.toString().padStart(2, '0')}s (${totalSec}s)`;
 }
 
-function buildSystemPrompt(color: 'WHITE' | 'BLACK', opponentName: string, playStyle?: string): string {
-  return `You are a Grandmaster-level chess engine and tactician playing as ${color} against ${opponentName}${playStyle ? ` (${playStyle})` : ''}.
+function buildSystemPrompt(params: {
+  color: 'WHITE' | 'BLACK';
+  opponentName: string;
+  playStyle?: string;
+  gameMode?: GameMode;
+  myModifiers?: string[];
+  oppModifiers?: string[];
+}): string {
+  const { color, opponentName, playStyle, gameMode, myModifiers, oppModifiers } = params;
+
+  let modeRules = '';
+  if (gameMode === 'mutators') {
+    const myModDesc = (myModifiers || [])
+      .map((id) => AVAILABLE_MODIFIERS.find((m) => m.id === id))
+      .filter(Boolean)
+      .map((m) => `   - ⭐ ${m!.name}: ${m!.description}`)
+      .join('\n');
+    const oppModDesc = (oppModifiers || [])
+      .map((id) => AVAILABLE_MODIFIERS.find((m) => m.id === id))
+      .filter(Boolean)
+      .map((m) => `   - ⚡ Enemy ${m!.name}: ${m!.description}`)
+      .join('\n');
+
+    modeRules = `
+SPECIAL GAME MODE: CHAOS AUTO-BATTLER WITH DRAFTED MUTATORS!
+Active Rules & Modifiers:
+Your Drafted Modifiers:
+${myModDesc || '   - None'}
+Opponent Drafted Modifiers:
+${oppModDesc || '   - None'}
+Exploit your modifiers actively and defend against enemy mutators!`;
+  } else if (gameMode === 'fog_of_war') {
+    modeRules = `
+SPECIAL GAME MODE: KRIEGSPIEL / FOG OF WAR (HIDDEN INFORMATION GRID)!
+- Squares outside your pieces' radar sight are veiled in fog (marked [?]).
+- Enemy positions are hidden unless one of your units directly sees them.
+- Deduce unseen enemy units, watch out for ambushes, and advance with strategic scouting!`;
+  }
+
+  return `You are a Grandmaster-level chess engine and tactician playing as ${color} against ${opponentName}${playStyle ? ` (${playStyle})` : ''}.${modeRules}
 Your objective is to win with precision and principled play.
 
 Evaluation checklist on every turn:
@@ -74,6 +220,9 @@ function buildTurnPrompt(params: {
   oppClockMs: number;
   incrementSec?: number;
   legalMoves: string[];
+  gameMode?: GameMode;
+  fogBoard?: string;
+  portalSquares?: [string, string];
 }): string {
   const myTotalSec = Math.max(0, Math.floor(params.myClockMs / 1000));
   const oppTotalSec = Math.max(0, Math.floor(params.oppClockMs / 1000));
@@ -101,9 +250,16 @@ function buildTurnPrompt(params: {
     ? `Opponent (${params.lastMove.player}) played: ${params.lastMove.san}.`
     : `Match begins.`;
 
+  let boardSection = `Position FEN: ${params.fen}`;
+  if (params.gameMode === 'fog_of_war' && params.fogBoard) {
+    boardSection = `🌫️ Fog of War Scout Radar:\n${params.fogBoard}\n(Hidden enemy sectors marked [?])`;
+  } else if (params.gameMode === 'mutators' && params.portalSquares) {
+    boardSection += `\n🌀 Quantum Portals Active on: ${params.portalSquares.join(' <-> ')}`;
+  }
+
   return `[Turn: ${params.color} | Move #${params.moveNumber}]
 ${lastMoveText}${checkAlert}${timeUrgencyBanner}
-Position FEN: ${params.fen}
+${boardSection}
 Chess Clocks:
 - Your remaining time: ${myFormatted}
 - Opponent remaining time: ${oppFormatted}
@@ -126,6 +282,12 @@ export class ServerOrchestrator {
   private blackModel: ModelConfig;
   private timeControl: TimeControl;
   private speedMode: SpeedMode = '0.5s';
+
+  private gameMode: GameMode = 'standard';
+  private whiteModifiers: string[] = ['portal_squares', 'bounty_hunter', 'exploding_rooks'];
+  private blackModifiers: string[] = ['ghost_knights', 'pawn_blitz', 'vampire_queen'];
+  private portalSquares: [string, string] = ['d4', 'e5'];
+  private fogVision: { w: string[]; b: string[] } = { w: [], b: [] };
 
   private clocks: { w: number; b: number };
   private captures: { w: string[]; b: string[] } = { w: [], b: [] };
@@ -187,6 +349,11 @@ export class ServerOrchestrator {
       blackModel: this.blackModel,
       timeControl: this.timeControl,
       speedMode: this.speedMode,
+      gameMode: this.gameMode,
+      whiteModifiers: [...this.whiteModifiers],
+      blackModifiers: [...this.blackModifiers],
+      portalSquares: this.portalSquares,
+      fogVision: this.fogVision,
       fen: this.chess.fen(),
       turn: this.chess.turn(),
       clocks: { ...this.clocks },
@@ -210,6 +377,9 @@ export class ServerOrchestrator {
     blackModel?: ModelConfig;
     timeControl?: TimeControl;
     speedMode?: SpeedMode;
+    gameMode?: GameMode;
+    whiteModifiers?: string[];
+    blackModifiers?: string[];
     tournamentId?: string | null;
     roundNumber?: number;
     matchIndex?: number;
@@ -220,6 +390,9 @@ export class ServerOrchestrator {
     if (params.blackModel) this.blackModel = params.blackModel;
     if (params.timeControl) this.timeControl = params.timeControl;
     if (params.speedMode) this.speedMode = params.speedMode;
+    if (params.gameMode) this.gameMode = params.gameMode;
+    if (params.whiteModifiers) this.whiteModifiers = params.whiteModifiers;
+    if (params.blackModifiers) this.blackModifiers = params.blackModifiers;
     this.tournamentId = params.tournamentId || null;
     this.roundNumber = params.roundNumber;
     this.matchIndex = params.matchIndex;
@@ -241,19 +414,34 @@ export class ServerOrchestrator {
     this.isPaused = false;
     this.isStepping = false;
     this.matchStartTime = Date.now();
+    this.fogVision = computeFogVision(this.chess);
 
     // Initialize agent memory
     this.agentMemory = {
       w: [
         {
           role: 'system',
-          content: buildSystemPrompt('WHITE', this.blackModel.name, this.blackModel.playStyle),
+          content: buildSystemPrompt({
+            color: 'WHITE',
+            opponentName: this.blackModel.name,
+            playStyle: this.blackModel.playStyle,
+            gameMode: this.gameMode,
+            myModifiers: this.whiteModifiers,
+            oppModifiers: this.blackModifiers,
+          }),
         },
       ],
       b: [
         {
           role: 'system',
-          content: buildSystemPrompt('BLACK', this.whiteModel.name, this.whiteModel.playStyle),
+          content: buildSystemPrompt({
+            color: 'BLACK',
+            opponentName: this.whiteModel.name,
+            playStyle: this.whiteModel.playStyle,
+            gameMode: this.gameMode,
+            myModifiers: this.blackModifiers,
+            oppModifiers: this.whiteModifiers,
+          }),
         },
       ],
     };
@@ -270,6 +458,9 @@ export class ServerOrchestrator {
         oppClockMs: this.clocks.b,
         incrementSec: this.timeControl.incrementSeconds,
         legalMoves: whiteLegalMoves,
+        gameMode: this.gameMode,
+        fogBoard: this.gameMode === 'fog_of_war' ? formatFogBoard(this.chess, 'w', this.fogVision.w) : undefined,
+        portalSquares: this.gameMode === 'mutators' ? this.portalSquares : undefined,
       }),
     });
 
@@ -501,6 +692,9 @@ export class ServerOrchestrator {
               inCheck: this.chess.inCheck(),
               isCheckmate: this.chess.isCheckmate(),
               isGameOver: this.chess.isGameOver(),
+              fogVision: this.fogVision,
+              gameMode: this.gameMode,
+              portalSquares: this.portalSquares,
             });
 
             toolCallEntries.push({
@@ -527,6 +721,9 @@ export class ServerOrchestrator {
                 oppClockMs: this.clocks[turn],
                 incrementSec: this.timeControl.incrementSeconds,
                 legalMoves: oppLegalMoves,
+                gameMode: this.gameMode,
+                fogBoard: this.gameMode === 'fog_of_war' ? formatFogBoard(this.chess, opponent, this.fogVision[opponent]) : undefined,
+                portalSquares: this.gameMode === 'mutators' ? this.portalSquares : undefined,
               }),
             });
           }
@@ -654,6 +851,9 @@ Call make_move immediately with {"move": "${legalMoves[0]}"} or another legal mo
                       inCheck: this.chess.inCheck(),
                       isCheckmate: this.chess.isCheckmate(),
                       isGameOver: this.chess.isGameOver(),
+                      fogVision: this.fogVision,
+                      gameMode: this.gameMode,
+                      portalSquares: this.portalSquares,
                     });
 
                     // Notify opponent of the move
@@ -671,6 +871,9 @@ Call make_move immediately with {"move": "${legalMoves[0]}"} or another legal mo
                         oppClockMs: this.clocks[turn],
                         incrementSec: this.timeControl.incrementSeconds,
                         legalMoves: oppLegalMoves,
+                        gameMode: this.gameMode,
+                        fogBoard: this.gameMode === 'fog_of_war' ? formatFogBoard(this.chess, opponent, this.fogVision[opponent]) : undefined,
+                        portalSquares: this.gameMode === 'mutators' ? this.portalSquares : undefined,
                       }),
                     });
                   } else {
@@ -751,6 +954,9 @@ Invoke make_move with your chosen legal move.`,
                 inCheck: this.chess.inCheck(),
                 isCheckmate: this.chess.isCheckmate(),
                 isGameOver: this.chess.isGameOver(),
+                fogVision: this.fogVision,
+                gameMode: this.gameMode,
+                portalSquares: this.portalSquares,
               });
 
               // Notify opponent of fallback move
@@ -768,6 +974,9 @@ Invoke make_move with your chosen legal move.`,
                   oppClockMs: this.clocks[turn],
                   incrementSec: this.timeControl.incrementSeconds,
                   legalMoves: oppLegalMoves,
+                  gameMode: this.gameMode,
+                  fogBoard: this.gameMode === 'fog_of_war' ? formatFogBoard(this.chess, opponent, this.fogVision[opponent]) : undefined,
+                  portalSquares: this.gameMode === 'mutators' ? this.portalSquares : undefined,
                 }),
               });
             }
@@ -896,6 +1105,82 @@ Invoke make_move with your chosen legal move.`,
         this.captures[captor].push(move.captured.toUpperCase());
       }
 
+      // Special Mutator Game Rules Execution
+      let extraEffectNote = '';
+      if (this.gameMode === 'mutators') {
+        const myModifiers = move.color === 'w' ? this.whiteModifiers : this.blackModifiers;
+
+        // 1. Bounty Hunter (+15s clock on capture)
+        if (move.captured && myModifiers.includes('bounty_hunter')) {
+          this.clocks[move.color] += 15000;
+          extraEffectNote += ' • ⏳ [Bounty Hunter: +15s Clock Awarded]';
+        }
+
+        // 2. Portal Squares (d4 <-> e5 teleportation)
+        if (myModifiers.includes('portal_squares')) {
+          const isD4 = move.to === 'd4';
+          const isE5 = move.to === 'e5';
+          const destPortal: Square = isD4 ? 'e5' : 'd4';
+
+          if ((isD4 || isE5) && !this.chess.get(destPortal)) {
+            const pieceOnTo = this.chess.get(move.to as Square);
+            if (pieceOnTo) {
+              this.chess.remove(move.to as Square);
+              this.chess.put(pieceOnTo, destPortal);
+              extraEffectNote += ` • 🌀 [Quantum Portal Teleport: ${move.to} ➔ ${destPortal}]`;
+            }
+          }
+        }
+
+        // 3. Exploding Rooks (Rook capture shockwave takes adjacent enemy pawns)
+        if (move.piece === 'r' && move.captured && myModifiers.includes('exploding_rooks')) {
+          const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+          const fileIdx = files.indexOf(move.to[0]);
+          const rankNum = parseInt(move.to[1], 10);
+          const oppColor = move.color === 'w' ? 'b' : 'w';
+
+          const adjCoords = [
+            [fileIdx - 1, rankNum],
+            [fileIdx + 1, rankNum],
+            [fileIdx, rankNum - 1],
+            [fileIdx, rankNum + 1],
+          ];
+
+          let explodedCount = 0;
+          for (const [cf, cr] of adjCoords) {
+            if (cf >= 0 && cf < 8 && cr >= 1 && cr <= 8) {
+              const adjSq = `${files[cf]}${cr}` as Square;
+              const adjPiece = this.chess.get(adjSq);
+              if (adjPiece && adjPiece.color === oppColor && adjPiece.type === 'p') {
+                this.chess.remove(adjSq);
+                this.captures[move.color].push('P');
+                explodedCount++;
+              }
+            }
+          }
+          if (explodedCount > 0) {
+            extraEffectNote += ` • 💥 [Rook Shockwave destroyed ${explodedCount} adjacent enemy pawn(s)]`;
+          }
+        }
+
+        // 4. Vampire Queen (Resurrect a friendly pawn on capture)
+        if (move.piece === 'q' && move.captured && myModifiers.includes('vampire_queen')) {
+          const oppColor = move.color === 'w' ? 'b' : 'w';
+          const backRank = move.color === 'w' ? '1' : '8';
+          const emptyBackSquare = ['d', 'e', 'c', 'f'].map((f) => `${f}${backRank}` as Square).find((sq) => !this.chess.get(sq));
+          if (emptyBackSquare && this.captures[oppColor].includes('P')) {
+            this.chess.put({ type: 'p', color: move.color }, emptyBackSquare);
+            const pIdx = this.captures[oppColor].indexOf('P');
+            this.captures[oppColor].splice(pIdx, 1);
+            extraEffectNote += ` • 🩸 [Vampire Queen revived friendly Pawn on ${emptyBackSquare}]`;
+          }
+        }
+      }
+
+      if (this.gameMode === 'fog_of_war') {
+        this.fogVision = computeFogVision(this.chess);
+      }
+
       const moveRecord: MoveRecord = {
         moveNumber: Math.floor((this.moves.length) / 2) + 1,
         turn: move.color,
@@ -906,7 +1191,7 @@ Invoke make_move with your chosen legal move.`,
         captured: move.captured,
         fenAfter: this.chess.fen(),
         latencyMs: metadata.latencyMs,
-        reasoning: metadata.reasoning,
+        reasoning: (metadata.reasoning || '') + extraEffectNote,
         toolCallsCount: metadata.toolCallsCount,
       };
 

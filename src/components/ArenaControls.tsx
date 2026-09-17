@@ -7,9 +7,12 @@ import {
   Volume2,
   VolumeX,
   FastForward,
-  SkipForward,
+  Eye,
+  EyeOff,
+  Sparkles,
+  CloudFog,
 } from 'lucide-react';
-import { ModelConfig, TimeControl } from '../types';
+import { ModelConfig, TimeControl, GameMode, SpectatorVision, AVAILABLE_MODIFIERS } from '../types';
 import { SpeedMode } from '../services/GameOrchestrator';
 import { AlgorithmEngine } from '../services/algorithmEngine';
 
@@ -23,12 +26,20 @@ interface ArenaControlsProps {
   blackModel: ModelConfig;
   timeControl: TimeControl;
   speedMode: SpeedMode;
+  gameMode: GameMode;
+  spectatorVision?: SpectatorVision;
+  whiteModifiers?: string[];
+  blackModifiers?: string[];
   audioEnabled: boolean;
   gameStatus: 'idle' | 'active' | 'paused' | 'stepping' | 'finished';
   onSelectWhite: (model: ModelConfig) => void;
   onSelectBlack: (model: ModelConfig) => void;
   onSelectTimeControl: (tc: TimeControl) => void;
   onSetSpeedMode: (mode: SpeedMode) => void;
+  onSetGameMode: (mode: GameMode) => void;
+  onSetSpectatorVision?: (vision: SpectatorVision) => void;
+  onToggleWhiteModifier?: (modId: string) => void;
+  onToggleBlackModifier?: (modId: string) => void;
   onToggleAudio: () => void;
   onStartGame: () => void;
   onPauseGame: () => void;
@@ -54,12 +65,20 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
   blackModel,
   timeControl,
   speedMode,
+  gameMode,
+  spectatorVision = 'all',
+  whiteModifiers = [],
+  blackModifiers = [],
   audioEnabled,
   gameStatus,
   onSelectWhite,
   onSelectBlack,
   onSelectTimeControl,
   onSetSpeedMode,
+  onSetGameMode,
+  onSetSpectatorVision,
+  onToggleWhiteModifier,
+  onToggleBlackModifier,
   onToggleAudio,
   onStartGame,
   onPauseGame,
@@ -103,6 +122,62 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
           {audioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} color="#f43f5e" />}
         </button>
       </div>
+
+      {/* Game Mode Selector */}
+      <div className="form-group">
+        <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Sparkles size={14} color="var(--neon-cyan)" />
+          <span>Game Mode</span>
+        </label>
+        <select
+          className="select-input"
+          value={gameMode}
+          onChange={(e) => onSetGameMode(e.target.value as GameMode)}
+          disabled={!isIdle}
+          style={{ borderColor: gameMode !== 'standard' ? 'var(--neon-cyan)' : undefined }}
+        >
+          <option value="standard">Standard Classical Chess</option>
+          <option value="mutators">🎲 Chaos Draft (Mutators Auto-Battler)</option>
+          <option value="fog_of_war">🌫️ Fog of War (Kriegspiel Radar)</option>
+        </select>
+      </div>
+
+      {/* Fog of War Spectator Vision Controls */}
+      {gameMode === 'fog_of_war' && onSetSpectatorVision && (
+        <div className="form-group" style={{ background: 'rgba(15, 23, 42, 0.5)', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
+          <label className="form-label" style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--neon-cyan)', margin: 0 }}>
+            <CloudFog size={13} />
+            <span>Spectator Radar Vision</span>
+          </label>
+          <div className="vision-toggle-bar">
+            <button
+              type="button"
+              className={`vision-btn ${spectatorVision === 'all' ? 'active' : ''}`}
+              onClick={() => onSetSpectatorVision('all')}
+              title="God Mode: View entire board with fog overlay"
+            >
+              <Eye size={12} />
+              <span>Omniscient</span>
+            </button>
+            <button
+              type="button"
+              className={`vision-btn ${spectatorVision === 'w' ? 'active' : ''}`}
+              onClick={() => onSetSpectatorVision('w')}
+              title="See strictly what White sees"
+            >
+              <span>⚪ White Radar</span>
+            </button>
+            <button
+              type="button"
+              className={`vision-btn ${spectatorVision === 'b' ? 'active' : ''}`}
+              onClick={() => onSetSpectatorVision('b')}
+              title="See strictly what Black sees"
+            >
+              <span>⚫ Black Radar</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Model Selection */}
       <div className="form-group">
@@ -235,21 +310,19 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
               <Play size={15} />
               <span>Resume</span>
             </button>
-            <button className="btn btn-secondary" onClick={onStepMove}>
-              <SkipForward size={15} />
-              <span>Step</span>
+            <button className="btn btn-secondary" onClick={onStepMove} title="Execute single move step">
+              <span>Step ➔</span>
             </button>
           </>
         ) : null}
 
-        {/* Reset / Rematch */}
         <button
           className="btn btn-secondary"
-          style={{ gridColumn: 'span 2', marginTop: '6px' }}
+          style={{ gridColumn: 'span 2', marginTop: '4px' }}
           onClick={onResetGame}
         >
-          <RotateCcw size={14} />
-          <span>Reset Board</span>
+          <RotateCcw size={15} />
+          <span>Reset Match</span>
         </button>
       </div>
     </div>

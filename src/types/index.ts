@@ -1,3 +1,75 @@
+export type GameMode = 'standard' | 'mutators' | 'fog_of_war';
+
+export interface DraftModifier {
+  id: string;
+  name: string;
+  icon: string;
+  cost: number;
+  description: string;
+  tag: string;
+}
+
+export type SpectatorVision = 'all' | 'w' | 'b';
+
+export const AVAILABLE_MODIFIERS: DraftModifier[] = [
+  {
+    id: 'exploding_rooks',
+    name: 'Exploding Rooks',
+    icon: '💥',
+    cost: 1,
+    description: 'Capturing with a Rook detonates a shockwave destroying enemy pawns on adjacent squares.',
+    tag: 'AOE Blast',
+  },
+  {
+    id: 'portal_squares',
+    name: 'Portal Squares',
+    icon: '🌀',
+    cost: 1,
+    description: 'Squares d4 and e5 are quantum portals. Landing on d4 teleports to e5 (and vice versa).',
+    tag: 'Wormhole',
+  },
+  {
+    id: 'ghost_knights',
+    name: 'Ghost Knights',
+    icon: '👻',
+    cost: 1,
+    description: 'Knights phase through pins and strike from hidden spectral angles.',
+    tag: 'Phase Shift',
+  },
+  {
+    id: 'bounty_hunter',
+    name: 'Bounty Hunter',
+    icon: '⏳',
+    cost: 1,
+    description: 'Every enemy capture instantly awards +15 seconds to your chess clock.',
+    tag: 'Time Siphon',
+  },
+  {
+    id: 'pawn_blitz',
+    name: 'Pawn Blitz',
+    icon: '⚡',
+    cost: 1,
+    description: 'Pawns can march 2 squares forward on any turn if unobstructed.',
+    tag: 'Super March',
+  },
+  {
+    id: 'king_aegis',
+    name: "King's Aegis",
+    icon: '🛡️',
+    cost: 1,
+    description: 'The King commands a titanium shield that absorbs the first fatal checkmate or check.',
+    tag: 'Death Defiance',
+  },
+  {
+    id: 'vampire_queen',
+    name: 'Vampire Queen',
+    icon: '🩸',
+    cost: 1,
+    description: 'Queen captures drain enemy life force, reviving a lost friendly pawn on the back rank.',
+    tag: 'Resurrection',
+  },
+];
+
 export type ModelProvider =
   | 'simulated'
   | 'algorithm'
