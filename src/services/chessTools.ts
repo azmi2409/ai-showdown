@@ -245,11 +245,84 @@ export function getToolsForMode(
   }
 ): ToolDefinition[] {
   switch (gameMode) {
-    case 'spell_draft':
-      return [CAST_SPELL_TOOL, BASE_MAKE_MOVE_TOOL, BOARD_STATE_TOOL, RESIGN_TOOL];
+    case 'spell_draft': {
+      const spells = options?.spells || [];
+      if (spells.length > 0) {
+        const spellMoveTool: ToolDefinition = {
+          type: 'function',
+          function: {
+            name: 'make_move',
+            description: `Execute a chess move in SAN. BATTLEMAGE ACTION: You hold ${spells.length} spell(s): [${spells.join(', ')}]. You can cast a spell at the same time by specifying "spell_id"!`,
+            parameters: {
+              type: 'object',
+              properties: {
+                move: {
+                  type: 'string',
+                  description: 'Legal chess move in SAN. Examples: "e4", "Nf3", "O-O", "Bxe5", "e8=Q".',
+                },
+                spell_id: {
+                  type: 'string',
+                  enum: spells,
+                  description: `ID of the spell from your hand to cast this turn before moving: ${spells.join(', ')}.`,
+                },
+                spell_sq1: {
+                  type: 'string',
+                  description: 'Optional primary target square for spell (e.g. piece to freeze, knight to catapult, or first pawn to swap).',
+                },
+                spell_sq2: {
+                  type: 'string',
+                  description: 'Optional secondary square for spell (e.g. catapult destination, second pawn to swap).',
+                },
+                reasoning: {
+                  type: 'string',
+                  description: 'Tactical calculation and spell strategy.',
+                },
+              },
+              required: ['move'],
+            },
+          },
+        };
+        return [spellMoveTool, CAST_SPELL_TOOL, BOARD_STATE_TOOL, RESIGN_TOOL];
+      }
+      return [BASE_MAKE_MOVE_TOOL, BOARD_STATE_TOOL, RESIGN_TOOL];
+    }
 
-    case 'crazyhouse':
-      return [DROP_PIECE_TOOL, BASE_MAKE_MOVE_TOOL, BOARD_STATE_TOOL, RESIGN_TOOL];
+    case 'crazyhouse': {
+      const reserves = options?.reserves || [];
+      const crazyhouseMoveTool: ToolDefinition = {
+        type: 'function',
+        function: {
+          name: 'make_move',
+          description: reserves.length > 0
+            ? `Execute a chess move or drop a reserve piece (${reserves.join(', ')}). Legal drop syntax: "P@e4", "N@f6", or provide drop_piece and drop_square!`
+            : 'Execute a chess move on the board in Standard Algebraic Notation (SAN).',
+          parameters: {
+            type: 'object',
+            properties: {
+              move: {
+                type: 'string',
+                description: 'Legal chess move in SAN (e.g. "e4", "Nf3") OR reserve piece drop (e.g. "P@e4", "N@d5").',
+              },
+              drop_piece: {
+                type: 'string',
+                enum: ['P', 'N', 'B', 'R', 'Q'],
+                description: 'Optional: Piece from reserves to drop directly on the board instead of moving.',
+              },
+              drop_square: {
+                type: 'string',
+                description: 'Optional: Target empty square to place the dropped piece (e.g. "e5", "d4").',
+              },
+              reasoning: {
+                type: 'string',
+                description: 'Tactical calculation and drop placement.',
+              },
+            },
+            required: ['move'],
+          },
+        },
+      };
+      return [DROP_PIECE_TOOL, crazyhouseMoveTool, BOARD_STATE_TOOL, RESIGN_TOOL];
+    }
 
     case 'duck_chess':
       return [MAKE_DUCK_MOVE_TOOL, BASE_MAKE_MOVE_TOOL, PLACE_DUCK_TOOL, BOARD_STATE_TOOL, RESIGN_TOOL];

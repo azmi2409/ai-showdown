@@ -161,6 +161,45 @@ export class ServerOrchestrator {
     sseHub.broadcast('status', { speedMode: this.speedMode });
   }
 
+  // ponytail: plain string compaction; upgrade to LLM-summarized if models need richer context
+  private compactMessages(messages: ConversationMessage[], side: 'w' | 'b'): string {
+    const moves: string[] = [];
+    const actions: string[] = [];
+    const errors: string[] = [];
+
+    for (const msg of messages) {
+      if (!msg.content) continue;
+      const text = typeof msg.content === 'string' ? msg.content : '';
+
+      if (msg.role === 'assistant' && msg.tool_calls?.length) {
+        for (const tc of msg.tool_calls) {
+          const name = tc.function.name;
+          let args = '';
+          try { args = JSON.stringify(JSON.parse(tc.function.arguments)); } catch { args = tc.function.arguments; }
+          if (name === 'make_move') {
+            const parsed = JSON.parse(tc.function.arguments);
+            moves.push(parsed.move || parsed.san || args);
+          } else {
+            actions.push(`${name}(${args})`);
+          }
+        }
+      } else if (msg.role === 'user') {
+        if (text.includes('ILLEGAL') || text.includes('ERROR')) {
+          errors.push(text.split('\n')[0]);
+        }
+      }
+    }
+
+    const parts: string[] = ['[GAME HISTORY SUMMARY]'];
+    if (moves.length) parts.push(`Your previous moves: ${moves.join(', ')}`);
+    if (actions.length) parts.push(`Variant actions used: ${actions.join('; ')}`);
+    if (errors.length) parts.push(`Past errors (avoid repeating): ${errors.join('; ')}`);
+    if (this.gameMode !== 'standard') {
+      parts.push(`REMINDER: This is ${this.gameMode.replace(/_/g, ' ')} mode. Use your variant-specific tools every turn.`);
+    }
+    return parts.join('\n');
+  }
+
   private getLegalMoves(turn?: 'w' | 'b'): string[] {
     const activeTurn = turn || this.chess.turn();
     let verboseMoves = this.chess.moves({ verbose: true });
@@ -602,17 +641,15 @@ export class ServerOrchestrator {
             if (this.status !== 'active' || this.isPaused || this.matchId !== loopMatchId) break;
 
             try {
-              // Prune old history to preserve variant focus and prevent classical chess drift
-              if (this.gameMode !== 'standard') {
-                if (this.agentMemory[turn].length > 4) {
-                  const sys = this.agentMemory[turn][0];
-                  this.agentMemory[turn] = [sys, ...this.agentMemory[turn].slice(-2)];
-                }
-              } else {
-                if (this.agentMemory[turn].length > 12) {
-                  const sys = this.agentMemory[turn][0];
-                  this.agentMemory[turn] = [sys, ...this.agentMemory[turn].slice(-6)];
-                }
+              // Compact old history into a summary instead of dropping it
+              const COMPACT_THRESHOLD = this.gameMode !== 'standard' ? 10 : 20;
+              const KEEP_RECENT = this.gameMode !== 'standard' ? 4 : 8;
+              if (this.agentMemory[turn].length > COMPACT_THRESHOLD) {
+                const sys = this.agentMemory[turn][0];
+                const recent = this.agentMemory[turn].slice(-KEEP_RECENT);
+                const old = this.agentMemory[turn].slice(1, -KEEP_RECENT);
+                const summary = this.compactMessages(old, turn);
+                this.agentMemory[turn] = [sys, { role: 'user', content: summary }, ...recent];
               }
 
               const memory = this.agentMemory[turn];
@@ -711,8 +748,57 @@ ${legalMoves.join(', ')}`,
                   tc.name === 'atomic_capture' ||
                   tc.name === 'use_portal'
                 ) {
-                  const moveArg = tc.arguments.move || '';
-                  const reasoningArg = tc.arguments.reasoning || capturedReasoning || '';
+                  // Cast spell if embedded in make_move (e.g. for single-call models like Gemini Flash)
+                  let embeddedSpellMsg = '';
+                  if (this.gameMode === 'spell_draft' && (tc.arguments.spell_id || tc.arguments.cast_spell)) {
+                    const spellId = tc.arguments.spell_id || tc.arguments.cast_spell;
+                    const mySpells = turn === 'w' ? this.whiteSpells : this.blackSpells;
+                    const spellIdx = mySpells.indexOf(spellId);
+                    if (spellIdx !== -1) {
+                      const castRes = VariantsEngine.castSpell(this.chess, spellId, turn, {
+                        sq1: tc.arguments.spell_sq1 || tc.arguments.sq1,
+                        sq2: tc.arguments.spell_sq2 || tc.arguments.sq2,
+                      });
+                      if (castRes.success) {
+                        mySpells.splice(spellIdx, 1);
+                        if (castRes.frozenSquare) {
+                          const opp = turn === 'w' ? 'b' : 'w';
+                          this.frozenSquare = { square: castRes.frozenSquare, turnExpires: opp };
+                        }
+                        embeddedSpellMsg = ` ✨ [Cast Spell: ${castRes.message}]`;
+                        this.activeThinking = {
+                          side: turn,
+                          modelName: currentModel.name,
+                          thoughtText: `✨ [Cast Spell: ${castRes.message}]`,
+                        };
+                        sseHub.broadcast('thought', this.activeThinking);
+                        sseHub.broadcast('move', {
+                          fen: this.chess.fen(),
+                          clocks: this.clocks,
+                          captures: this.captures,
+                          turn: this.chess.turn(),
+                          inCheck: this.chess.inCheck(),
+                          isCheckmate: this.chess.isCheckmate(),
+                          isGameOver: this.chess.isGameOver(),
+                          whiteSpells: this.whiteSpells,
+                          blackSpells: this.blackSpells,
+                          gameMode: this.gameMode,
+                        });
+                      }
+                    }
+                  }
+
+                  let moveArg = tc.arguments.move || '';
+                  if (
+                    this.gameMode === 'crazyhouse' &&
+                    tc.arguments.drop_piece &&
+                    tc.arguments.drop_square &&
+                    (!moveArg || moveArg === 'drop' || !moveArg.includes('@'))
+                  ) {
+                    moveArg = `${tc.arguments.drop_piece.toUpperCase()}@${tc.arguments.drop_square.toLowerCase()}`;
+                  }
+
+                  const reasoningArg = (tc.arguments.reasoning || capturedReasoning || '') + embeddedSpellMsg;
                   if (reasoningArg && !capturedReasoning) capturedReasoning = reasoningArg;
 
                   const exec = this.applyMove(moveArg, {
