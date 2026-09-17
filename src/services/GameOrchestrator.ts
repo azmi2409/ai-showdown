@@ -11,6 +11,84 @@ import { storageService } from './storageService';
 
 export type SpeedMode = '1x' | '0.5s' | 'instant';
 
+function formatClockTime(ms: number): string {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min}m ${sec.toString().padStart(2, '0')}s (${totalSec}s)`;
+}
+
+function buildSystemPrompt(color: 'WHITE' | 'BLACK', opponentName: string, playStyle?: string): string {
+  return `You are a Grandmaster-level chess engine and tactician playing as ${color} against ${opponentName}${playStyle ? ` (${playStyle})` : ''}.
+Your objective is to win with precision and principled play.
+
+Evaluation checklist on every turn:
+1. King Safety: Check for threats, king exposure, checks, mating nets, and back-rank weaknesses. Defend threats first.
+2. Tactical Scanning: Find forcing moves (checks, captures, threats). Spot hanging or undefended pieces.
+3. Positional Strategy: Control the center (e4/d4/e5/d5), develop pieces harmoniously, activate rooks on open files, secure outposts.
+4. Calculation: Evaluate 2-3 candidate moves from the legal moves list. Consider opponent's strongest reply.
+5. Clock Management & Time Strategy:
+   - Digital clocks are running. Reaching 0s is an instant loss on time (Flag fall).
+   - When your clock is comfortable (>60s): calculate deeply and seek best objective lines.
+   - When under time pressure (15s-60s): play quickly, avoid speculative complications, pick clean, solid moves.
+   - When in time scramble (<15s): avoid timeout at all costs—pick an immediate, safe, legal move without hesitation.
+   - When opponent is in severe time trouble: pose practical tactical questions to pressure their clock.
+6. Legal Execution: You MUST pick an exact legal SAN move from the provided list and invoke "make_move".
+
+Always invoke make_move with your chosen move and concise, sharp tactical reasoning incorporating board analysis and time situation.`;
+}
+
+function buildTurnPrompt(params: {
+  color: 'WHITE' | 'BLACK';
+  moveNumber: number;
+  lastMove?: { player: string; san: string };
+  fen: string;
+  inCheck: boolean;
+  myClockMs: number;
+  oppClockMs: number;
+  incrementSec?: number;
+  legalMoves: string[];
+}): string {
+  const myTotalSec = Math.max(0, Math.floor(params.myClockMs / 1000));
+  const oppTotalSec = Math.max(0, Math.floor(params.oppClockMs / 1000));
+  const myFormatted = formatClockTime(params.myClockMs);
+  const oppFormatted = formatClockTime(params.oppClockMs);
+  const timeDelta = myTotalSec - oppTotalSec;
+  const deltaText =
+    timeDelta > 5
+      ? `Time Advantage: +${timeDelta}s ahead of opponent.`
+      : timeDelta < -5
+      ? `Time Deficit: ${timeDelta}s behind opponent (accelerate tempo).`
+      : `Clocks roughly even.`;
+
+  let timeUrgencyBanner = '';
+  if (myTotalSec <= 10) {
+    timeUrgencyBanner = `\n🚨 CRITICAL TIME SCRAMBLE: ONLY ${myTotalSec} SECONDS REMAINING! Move immediately to avoid losing on time (flag-fall)! Pick the safest immediate legal move.`;
+  } else if (myTotalSec <= 30) {
+    timeUrgencyBanner = `\n⏱️ TIME PRESSURE WARNING: Under 30s remaining (${myTotalSec}s). Simplify position and prioritize rapid, safe play.`;
+  } else if (oppTotalSec <= 15) {
+    timeUrgencyBanner = `\n⚡ OPPONENT TIME TROUBLE: Opponent has only ${oppTotalSec}s remaining. Play solid moves that demand precision to pressure their clock.`;
+  }
+
+  const checkAlert = params.inCheck ? `\n⚠️ CRITICAL ALERT: YOU ARE IN CHECK! Defend your King immediately.` : '';
+  const lastMoveText = params.lastMove
+    ? `Opponent (${params.lastMove.player}) played: ${params.lastMove.san}.`
+    : `Match begins.`;
+
+  return `[Turn: ${params.color} | Move #${params.moveNumber}]
+${lastMoveText}${checkAlert}${timeUrgencyBanner}
+Position FEN: ${params.fen}
+Chess Clocks:
+- Your remaining time: ${myFormatted}
+- Opponent remaining time: ${oppFormatted}
+- Clock status: ${deltaText}
+
+Available Legal Moves (${params.legalMoves.length}):
+${params.legalMoves.join(', ')}
+
+Evaluate the position considering your clock situation, calculate candidate lines, and call make_move with your move and strategic reasoning.`;
+}
+
 export class GameOrchestrator {
   private store: GameStateStore;
   private whiteModel: ModelConfig;
@@ -133,19 +211,29 @@ export class GameOrchestrator {
     this.startClock();
 
     // Initialize system prompts in agent memories
-    const whiteSystemPrompt = `You are playing chess as WHITE against ${this.blackModel.name}. Use the provided tools (get_board_state, get_legal_moves, make_move, resign) to interact with the board. Calculate deeply and make legal moves in Standard Algebraic Notation (SAN).`;
-    const blackSystemPrompt = `You are playing chess as BLACK against ${this.whiteModel.name}. Use the provided tools (get_board_state, get_legal_moves, make_move, resign) to interact with the board. Calculate deeply and make legal moves in Standard Algebraic Notation (SAN).`;
-
-    this.store.appendMemory('w', { role: 'system', content: whiteSystemPrompt });
-    this.store.appendMemory('b', { role: 'system', content: blackSystemPrompt });
+    this.store.appendMemory('w', {
+      role: 'system',
+      content: buildSystemPrompt('WHITE', this.blackModel.name, this.blackModel.playStyle),
+    });
+    this.store.appendMemory('b', {
+      role: 'system',
+      content: buildSystemPrompt('BLACK', this.whiteModel.name, this.whiteModel.playStyle),
+    });
 
     // Initial prompt to White with legal moves
     const whiteLegalMoves = this.store.getLegalMoves();
+    const clocks = this.store.getClocks();
     this.store.appendMemory('w', {
       role: 'user',
-      content: `The game has started. You are WHITE. Current position (FEN): ${this.store.getFEN()}.\nLegal moves available: ${whiteLegalMoves.join(
-        ', '
-      )}.\nYou MUST invoke the make_move tool with your chosen move from the list above and your strategic reasoning.`,
+      content: buildTurnPrompt({
+        color: 'WHITE',
+        moveNumber: 1,
+        fen: this.store.getFEN(),
+        inCheck: this.store.isCheck(),
+        myClockMs: clocks.w,
+        oppClockMs: clocks.b,
+        legalMoves: whiteLegalMoves,
+      }),
     });
 
     this.runTurnLoop();
@@ -233,11 +321,19 @@ export class GameOrchestrator {
           // Notify opponent of the move with their legal moves
           const opponent = turn === 'w' ? 'b' : 'w';
           const opponentLegalMoves = this.store.getLegalMoves();
+          const oppClocks = this.store.getClocks();
           this.store.appendMemory(opponent, {
             role: 'user',
-            content: `Your opponent played: ${exec.moveRecord?.san}. Current position (FEN): ${this.store.getFEN()}.\nLegal moves available: ${opponentLegalMoves.join(
-              ', '
-            )}.\nIt is your turn. Invoke make_move with your chosen move from the list and your strategic reasoning.`,
+            content: buildTurnPrompt({
+              color: opponent === 'w' ? 'WHITE' : 'BLACK',
+              moveNumber: Math.floor(this.store.getMoves().length / 2) + 1,
+              lastMove: { player: currentModel.name, san: exec.moveRecord?.san || algoResult.san },
+              fen: this.store.getFEN(),
+              inCheck: this.store.isCheck(),
+              myClockMs: oppClocks[opponent],
+              oppClockMs: oppClocks[turn],
+              legalMoves: opponentLegalMoves,
+            }),
           });
         }
       } else {
@@ -261,7 +357,8 @@ export class GameOrchestrator {
                     thoughtText: capturedReasoning,
                   });
                 }
-              }
+              },
+              this.abortController?.signal
             );
 
             this.store.appendMemory(turn, response.rawAssistantMessage);
@@ -332,11 +429,19 @@ export class GameOrchestrator {
                   // Notify opponent of the move with their legal moves
                   const opponent = turn === 'w' ? 'b' : 'w';
                   const opponentLegalMoves = this.store.getLegalMoves();
+                  const oppClocks = this.store.getClocks();
                   this.store.appendMemory(opponent, {
                     role: 'user',
-                    content: `Your opponent played: ${exec.moveRecord?.san}. Current position (FEN): ${this.store.getFEN()}.\nLegal moves available: ${opponentLegalMoves.join(
-                      ', '
-                    )}.\nIt is your turn. Invoke make_move with your chosen move from the list and your strategic reasoning.`,
+                    content: buildTurnPrompt({
+                      color: opponent === 'w' ? 'WHITE' : 'BLACK',
+                      moveNumber: Math.floor(this.store.getMoves().length / 2) + 1,
+                      lastMove: { player: currentModel.name, san: exec.moveRecord?.san || moveArg },
+                      fen: this.store.getFEN(),
+                      inCheck: this.store.isCheck(),
+                      myClockMs: oppClocks[opponent],
+                      oppClockMs: oppClocks[turn],
+                      legalMoves: opponentLegalMoves,
+                    }),
                   });
                 } else {
                   retries++;
@@ -527,6 +632,7 @@ export class GameOrchestrator {
   }
 
   public stopGame(): void {
+    this.store.setStatus('idle');
     this.stopClock();
     if (this.abortController) {
       this.abortController.abort();

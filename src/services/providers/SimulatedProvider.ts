@@ -16,7 +16,8 @@ export class SimulatedProvider implements AgentProvider {
     modelIdentifier: string,
     _apiKey?: string,
     _customBaseUrl?: string,
-    onStreamChunk?: (chunk: any) => void
+    onStreamChunk?: (chunk: any) => void,
+    signal?: AbortSignal
   ): Promise<AgentTurnResponse> {
     const startTime = performance.now();
     const persona = modelIdentifier || this.personaId;
@@ -29,7 +30,15 @@ export class SimulatedProvider implements AgentProvider {
         ? 600 + Math.random() * 400
         : 300 + Math.random() * 300;
 
+    if (signal?.aborted) {
+      throw new Error('Aborted');
+    }
+
     await new Promise((resolve) => setTimeout(resolve, delay));
+
+    if (signal?.aborted) {
+      throw new Error('Aborted');
+    }
 
     // Extract current game board state from conversation or re-create
     // Find the latest FEN or board info if available

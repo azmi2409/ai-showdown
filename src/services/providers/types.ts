@@ -39,7 +39,8 @@ export interface AgentProvider {
     modelIdentifier: string,
     apiKey?: string,
     customBaseUrl?: string,
-    onStreamChunk?: (chunk: StreamChunk) => void
+    onStreamChunk?: (chunk: StreamChunk) => void,
+    signal?: AbortSignal
   ): Promise<AgentTurnResponse>;
 
   formatToolResult(toolCallId: string, result: any): ConversationMessage;
