@@ -1,4 +1,5 @@
-import { SystemPromptParams, TurnPromptParams, formatClockTime, formatClockBlock } from './types';
+import type { SystemPromptParams, TurnPromptParams } from './types';
+import { formatClockTime, formatClockBlock } from './types';
 import { buildStandardSystemPrompt, buildStandardTurnPrompt } from './standard';
 import { buildSpellDraftSystemPrompt, buildSpellDraftTurnPrompt } from './spellDraft';
 import { buildCrazyhouseSystemPrompt, buildCrazyhouseTurnPrompt } from './crazyhouse';
@@ -7,9 +8,8 @@ import { buildAtomicChessSystemPrompt, buildAtomicChessTurnPrompt } from './atom
 import { buildMutatorsSystemPrompt, buildMutatorsTurnPrompt } from './mutators';
 import { buildFogOfWarSystemPrompt, buildFogOfWarTurnPrompt } from './fogOfWar';
 
+export type { SystemPromptParams, TurnPromptParams };
 export {
-  SystemPromptParams,
-  TurnPromptParams,
   formatClockTime,
   formatClockBlock,
   buildStandardSystemPrompt,

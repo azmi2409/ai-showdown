@@ -1,4 +1,5 @@
-import { SystemPromptParams, TurnPromptParams, formatClockBlock } from './types';
+import type { SystemPromptParams, TurnPromptParams } from './types';
+import { formatClockBlock } from './types';
 
 export function buildStandardSystemPrompt(params: SystemPromptParams): string {
   return `You are a Grandmaster-level chess engine and tactician playing as ${params.color} against ${params.opponentName}${params.playStyle ? ` (${params.playStyle})` : ''}.

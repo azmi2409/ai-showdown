@@ -1,4 +1,5 @@
-import { SystemPromptParams, TurnPromptParams, formatClockBlock } from './types';
+import type { SystemPromptParams, TurnPromptParams } from './types';
+import { formatClockBlock } from './types';
 
 export function buildDuckChessSystemPrompt(params: SystemPromptParams): string {
   return `You are a Grandmaster tactician playing as ${params.color} against ${params.opponentName} in DUCK CHESS!

@@ -1,5 +1,6 @@
 import { AVAILABLE_SPELLS } from '../../src/types';
-import { SystemPromptParams, TurnPromptParams, formatClockBlock } from './types';
+import type { SystemPromptParams, TurnPromptParams } from './types';
+import { formatClockBlock } from './types';
 
 export function buildSpellDraftSystemPrompt(params: SystemPromptParams): string {
   const mySpellNames = (params.mySpells || [])
