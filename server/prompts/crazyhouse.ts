@@ -12,7 +12,7 @@ export function buildCrazyhouseSystemPrompt(params: SystemPromptParams): string 
 3. DROPS ARE OFTEN STRONGER THAN MOVES: A dropped piece bypasses all obstacles, delivers instant checks, blocks incoming threats, or forks multiple pieces.
 4. KING HUNTING: Prioritize checking the enemy King with reserve drops or sealing mating nets with dropped pieces!
 
-Always evaluate your DROP options first. Call "make_move" with a board move (e.g. "Nf3") or a drop move (e.g. "N@f3").`;
+Always evaluate your DROP options first. If you have reserve pieces, call "drop_piece" with your chosen piece and target square, or "make_move" with a board move.`;
 }
 
 export function buildCrazyhouseTurnPrompt(params: TurnPromptParams): string {
@@ -40,5 +40,5 @@ ${dropMoves.length > 0 ? dropMoves.join(', ') : 'None available (reserve empty)'
 Standard Board Moves (${boardMoves.length}):
 ${boardMoves.join(', ')}
 
-Analyze if a piece drop (e.g. ${dropMoves[0] || 'N@f3'}) creates an immediate fork, check, or checkmate attack. Call make_move with your move.`;
+${dropMoves.length > 0 ? `👉 PRIORITY: You have pieces in reserve! Invoke tool "drop_piece" with {"piece": "${myReserve[0]}", "square": "${dropMoves[0].split('@')[1]}"} or your preferred drop to seize the initiative, or invoke "make_move".` : `Invoke "make_move" with your chosen move.`}`;
 }

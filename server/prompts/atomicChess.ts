@@ -32,5 +32,5 @@ ${clockInfo}
 Available Legal Moves (${params.legalMoves.length}):
 ${params.legalMoves.join(', ')}
 
-Calculate explosive lines and call make_move with your move and reasoning.`;
+${params.legalMoves.some((m) => m.includes('x')) ? `👉 TACTICAL STRIKE: Captures detected! Invoke "atomic_capture" with your chosen capture move to trigger an atomic explosion!` : `Invoke "make_move" with your chosen move.`}`;
 }

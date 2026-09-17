@@ -25,5 +25,5 @@ ${clockInfo}
 Available Legal Moves (${params.legalMoves.length}):
 ${params.legalMoves.join(', ')}
 
-Calculate forcing lines, hunt the enemy King, and call make_move.`;
+👉 ACTION: Invoke tool "make_move_and_duck" with {"move": "${params.legalMoves[0]}", "duck_square": "e5"} to move your piece AND drop the duck on an empty square to paralyze the enemy!`;
 }

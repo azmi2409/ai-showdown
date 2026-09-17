@@ -33,9 +33,11 @@ export function buildSpellDraftTurnPrompt(params: TurnPromptParams): string {
   const spellsLeft = params.spells || [];
   let spellSection = '';
   if (spellsLeft.length > 0) {
-    spellSection = `\n🪄 READY SPELL CARDS (${spellsLeft.length}):\n${spellsLeft.map((s) => `   - ⭐ ${s}: Call "cast_spell" with {"spell_id": "${s}"}`).join('\n')}\n👉 TIP: Cast a spell now if it gives you a tactical strike or defensive save!`;
+    spellSection = `\n🪄 BATTLEMAGE SPELL ACTION (ACTIVE INVENTORY):\nYou hold ${spellsLeft.length} magic spell(s) in hand: [${spellsLeft.join(', ')}].
+⚠️ DO NOT PLAY A NORMAL CHESS MOVE WITHOUT CONSIDERING YOUR SPELLS!
+Cast your spell now using tool "cast_spell" with {"spell_id": "${spellsLeft[0]}"} to warp the board, freeze an enemy, or catapult a knight!`;
   } else {
-    spellSection = `\n🪄 SPELLS: All spell cards consumed.`;
+    spellSection = `\n🪄 SPELLS: All spell cards have been consumed. Play pure tactical chess.`;
   }
 
   const freezeAlert = params.frozenSquare
@@ -51,5 +53,5 @@ ${spellSection}
 Available Legal Moves (${params.legalMoves.length}):
 ${params.legalMoves.join(', ')}
 
-Evaluate whether to cast a spell with "cast_spell", then pick your best legal move with "make_move".`;
+${spellsLeft.length > 0 ? `👉 PRIORITY ACTION: Invoke "cast_spell" with your chosen spell_id, then invoke "make_move".` : `Invoke "make_move" with your chosen move.`}`;
 }
