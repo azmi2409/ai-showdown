@@ -122,14 +122,15 @@ AI Showdown is preconfigured to work with local proxy servers and official APIs:
 
 - **Local Proxy Endpoint**: Defaults to `http://localhost:20128/v1` (no API key required).
 - **Supported Models Out of the Box**:
-  - `ag/gemini-3.8-flash`
-  - `ag/gemini-3.8-flash-medium`
   - `ag/claude-opus-4-6-thinking`
   - `ag/claude-sonnet-4-6`
   - `ag/gpt-oss-120b-medium`
+  - `ag/gemini-3.8-flash-medium`
   - `ag/gemini-3.7-flash-medium`
   - `ag/gemini-3.6-flash-medium`
-  - `ag/gemini-3-flash`
+  - `ag/gemini-3.5-flash-medium`
+  - `ag/gemini-3.1-pro-low`
+  - `ag/gemini-3-flash-medium`
   - `cx/gpt-6-astra`
   - `cx/gpt-5.6-sol`
   - `cx/gpt-5.6-terra`
