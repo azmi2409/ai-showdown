@@ -111,14 +111,14 @@ const defaultWhiteModel = DEFAULT_MODELS[0] || {
 };
 
 const defaultBlackModel = DEFAULT_MODELS[1] || {
-  id: 'ag-gemini-38-flash',
-  name: 'Gemini 3.8 Flash',
+  id: 'ag-gemini-38-flash-medium',
+  name: 'Gemini 3.8 Flash (Medium)',
   provider: 'openai',
-  modelIdentifier: 'ag/gemini-3.8-flash',
-  avatar: '⚡',
-  badgeColor: '#38bdf8',
-  playStyle: 'Ultra-fast frontier tactician',
-  description: 'Gemini 3.8 Flash',
+  modelIdentifier: 'ag/gemini-3.8-flash-medium',
+  avatar: '💎',
+  badgeColor: '#0ea5e9',
+  playStyle: 'Deep thinking, high strategic accuracy & tool calling',
+  description: 'Gemini 3.8 Flash Medium reasoning tier.',
 };
 
 export const useGameStore = create<GameStoreState>((set) => ({

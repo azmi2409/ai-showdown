@@ -161,14 +161,14 @@ export class ServerOrchestrator {
       description: 'GPT 6.0 Astra',
     };
     this.blackModel = {
-      id: 'ag-gemini-38-flash',
-      name: 'Gemini 3.8 Flash',
+      id: 'ag-gemini-38-flash-medium',
+      name: 'Gemini 3.8 Flash (Medium)',
       provider: 'openai',
-      modelIdentifier: 'ag/gemini-3.8-flash',
-      avatar: '⚡',
-      badgeColor: '#38bdf8',
-      playStyle: 'Ultra-fast frontier tactician',
-      description: 'Gemini 3.8 Flash',
+      modelIdentifier: 'ag/gemini-3.8-flash-medium',
+      avatar: '💎',
+      badgeColor: '#0ea5e9',
+      playStyle: 'Deep thinking, high strategic accuracy & tool calling',
+      description: 'Gemini 3.8 Flash Medium reasoning tier.',
     };
     this.timeControl = { name: 'Blitz 3+2', baseSeconds: 180, incrementSeconds: 2 };
     this.clocks = {
