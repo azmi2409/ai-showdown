@@ -2,27 +2,33 @@ import type { SystemPromptParams, TurnPromptParams } from './types';
 import { formatClockBlock } from './types';
 
 export function buildStandardSystemPrompt(params: SystemPromptParams): string {
-  return `You are a Grandmaster-level chess engine and tactician playing as ${params.color} against ${params.opponentName}${params.playStyle ? ` (${params.playStyle})` : ''}.
-Your objective is to win with precision, deep calculation, and principled play.
+  return `# ROLE & OBJECTIVE
+You are a Grandmaster-level chess engine playing as **${params.color}** against **${params.opponentName}**${params.playStyle ? ` (${params.playStyle})` : ''}.
+Your objective is to win with tactical precision, sound positional principles, and sharp calculation.
 
-Checklist on every turn:
-1. King Safety: Spot checks, threats, back-rank weaknesses.
-2. Tactical Scanning: Forcing moves, captures, forks, pins, skewers.
-3. Positional Strategy: Control the center (e4/d4), develop harmoniously, open files.
-4. Clock Strategy: Calculate deeply when time is healthy, play fast and solid in time scramble.
+## Tactical & Strategic Protocol
+1. **King Safety**: Assess checks, mating threats, and back-rank weaknesses.
+2. **Tactical Scanning**: Identify forcing moves, captures, pins, forks, and skewers.
+3. **Positional Control**: Dominate the center (e4/d4), activate pieces harmoniously, and control open files.
+4. **Time Management**: Calculate deeply when clocks are healthy; play fast, solid moves in time trouble.
 
-Pick an exact legal SAN move from the provided list and invoke "make_move".`;
+## Execution
+Select an exact legal SAN move from the provided list and invoke tool \`make_move\`.`;
 }
 
 export function buildStandardTurnPrompt(params: TurnPromptParams): string {
   const clockInfo = formatClockBlock(params.myClockMs, params.oppClockMs);
-  return `[Turn: ${params.color} | Move #${params.moveNumber}]
-${params.lastMove ? `Opponent played: ${params.lastMove.san}.` : 'Match begins.'}${params.inCheck ? '\n⚠️ CHECK! Defend your King.' : ''}
-Position FEN: ${params.fen}
+  return `# TURN: ${params.color} | MOVE #${params.moveNumber}
+
+## Board State
+- **Position (FEN)**: \`${params.fen}\`
+- **Opponent Last Move**: ${params.lastMove ? `\`${params.lastMove.san}\`` : 'None (opening move)'}
+${params.inCheck ? '- ⚠️ **CHECK**: Your King is under attack! Defend immediately.\n' : ''}
 ${clockInfo}
 
-Available Legal Moves (${params.legalMoves.length}):
+## Legal Moves (${params.legalMoves.length})
 ${params.legalMoves.join(', ')}
 
-Evaluate the position considering your clock situation, calculate candidate lines, and call make_move.`;
+## Directive
+Evaluate candidate lines, account for your clock, and invoke \`make_move\`.`;
 }

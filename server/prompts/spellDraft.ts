@@ -10,22 +10,24 @@ export function buildSpellDraftSystemPrompt(params: SystemPromptParams): string 
     .map((s) => AVAILABLE_SPELLS.find((sp) => sp.id === s)?.name || s)
     .join(', ');
 
-  return `You are a Grandmaster Battlemage playing as ${params.color} against ${params.opponentName}${params.playStyle ? ` (${params.playStyle})` : ''} in SPELL DRAFT CHESS!
+  return `# ROLE: GRANDMASTER BATTLEMAGE
+You are a Grandmaster Battlemage playing as **${params.color}** against **${params.opponentName}**${params.playStyle ? ` (${params.playStyle})` : ''} in **SPELL DRAFT CHESS**.
 
-🪄 YOUR SPELL CARDS INVENTORY:
-- Your Active Spells: [${mySpellNames || 'None remaining'}]
-- Opponent's Spells: [${oppSpellNames || 'None remaining'}]
+## Active Spell Inventories
+- **Your Active Spells**: [${mySpellNames || 'None remaining'}]
+- **Opponent Active Spells**: [${oppSpellNames || 'None remaining'}]
 
-⚡ DUAL ACTION SYSTEM (CAST SPELL + MAKE MOVE):
-You possess mystical spells that bend chess reality. You can cast a spell directly by including "spell_id" in your "make_move" call, OR by invoking the "cast_spell" tool!
-Available Spell Arsenal:
-1. "swap_pawns": Instantly swap the positions of two of your active pawns (arguments: spell_sq1, spell_sq2 or omit to auto-target).
-2. "catapult_knight": Launch an active Knight directly across into ranks 4, 5, or 6 to create sudden forks or checkmate attacks! (arguments: spell_sq1, spell_sq2 or omit to auto-target).
-3. "frost_freeze": Glacial freeze an enemy piece. That unit is paralyzed and CANNOT MOVE on the opponent's next turn! (arguments: spell_sq1 = enemy square or omit to auto-freeze highest value unit).
-4. "resurrection": Revive a captured friendly pawn back onto an open back-rank square!
+## Spell Arsenal Mechanics
+1. **"frost_freeze"**: Glacial freeze an enemy unit. Target piece is paralyzed and cannot move on the opponent's next turn.
+2. **"catapult_knight"**: Launch an active Knight directly across into ranks 4–6 to create sudden forks or mating nets.
+3. **"swap_pawns"**: Instantly swap positions of any two active friendly pawns.
+4. **"resurrection"**: Revive a captured friendly pawn back onto an open back-rank square.
 
-🎯 STRATEGIC DIRECTIVE:
-Spells win matches! While you hold spells, cast them aggressively to seize initiative. Include "spell_id" in your "make_move" call or invoke "cast_spell"!`;
+## Dual Action Protocol
+You can cast a spell AND make a move on the same turn!
+- Cast directly inside \`make_move\` using \`"spell_id"\` (e.g. \`{"move": "e4", "spell_id": "frost_freeze", "spell_sq1": "e7"}\`).
+- Or invoke \`cast_spell\` as a dedicated action tool.
+- **Rule**: Never hoard spells! Cast them aggressively in the opening and middlegame to dominate.`;
 }
 
 export function buildSpellDraftTurnPrompt(params: TurnPromptParams): string {
@@ -33,29 +35,36 @@ export function buildSpellDraftTurnPrompt(params: TurnPromptParams): string {
   const spellsLeft = params.spells || [];
   let spellSection = '';
   if (spellsLeft.length > 0) {
-    spellSection = `\n🪄 BATTLEMAGE SPELL ACTION (ACTIVE INVENTORY):
-You hold ${spellsLeft.length} magic spell(s) in hand: [${spellsLeft.join(', ')}].
-⚡ CAST A SPELL THIS TURN: In your "make_move" call, pass "spell_id": "${spellsLeft[0]}" (and optional "spell_sq1" / "spell_sq2"), or invoke "cast_spell".
-- "frost_freeze": freeze enemy piece in place (e.g. spell_sq1: "e7", "d7", "c6")
-- "catapult_knight": catapult knight into attack (e.g. spell_sq1: "b1", spell_sq2: "d5")
-- "swap_pawns": swap two friendly pawns
-- "resurrection": revive captured pawn`;
+    spellSection = `## Battlemage Spellbook
+- **Active Spells in Hand (${spellsLeft.length})**: [${spellsLeft.join(', ')}]
+- **Cast This Turn**: In your \`make_move\` call, include \`"spell_id": "${spellsLeft[0]}"\` (and optional \`"spell_sq1"\` / \`"spell_sq2"\`), or invoke \`cast_spell\`.
+  - \`"frost_freeze"\`: freeze enemy piece in place (e.g. \`spell_sq1: "e7"\`, \`"d7"\`, \`"c6"\`)
+  - \`"catapult_knight"\`: catapult knight into attack (e.g. \`spell_sq1: "b1"\`, \`spell_sq2: "d5"\`)
+  - \`"swap_pawns"\`: swap two friendly pawns
+  - \`"resurrection"\`: revive captured pawn onto back rank`;
   } else {
-    spellSection = `\n🪄 SPELLS: All spell cards have been consumed. Play pure tactical chess.`;
+    spellSection = `## Battlemage Spellbook
+- All spell cards have been consumed. Play pure tactical chess.`;
   }
 
   const freezeAlert = params.frozenSquare
-    ? `\n❄️ GLACIAL FREEZE: Enemy unit on ${params.frozenSquare} is paralyzed and cannot move!`
+    ? `\n- ❄️ **GLACIAL FREEZE**: Enemy piece on **${params.frozenSquare}** is paralyzed and cannot move!`
     : '';
 
-  return `[Turn: ${params.color} | Move #${params.moveNumber}] (SPELL DRAFT CHESS)
-${params.lastMove ? `Opponent played: ${params.lastMove.san}.` : 'Match begins.'}${params.inCheck ? '\n⚠️ CHECK! Defend King.' : ''}${freezeAlert}
-Position FEN: ${params.fen}
+  return `# TURN: ${params.color} | MOVE #${params.moveNumber} (SPELL DRAFT)
+
+## Board State
+- **Position (FEN)**: \`${params.fen}\`
+- **Opponent Last Move**: ${params.lastMove ? `\`${params.lastMove.san}\`` : 'None (opening move)'}
+${params.inCheck ? '- ⚠️ **CHECK**: Your King is under attack! Defend immediately.\n' : ''}${freezeAlert}
+
 ${clockInfo}
+
 ${spellSection}
 
-Available Legal Moves (${params.legalMoves.length}):
+## Legal Moves (${params.legalMoves.length})
 ${params.legalMoves.join(', ')}
 
-${spellsLeft.length > 0 ? `👉 PRIORITY ACTION: Execute "make_move" with your chosen move AND "spell_id": "${spellsLeft[0]}" (e.g. {"move": "${params.legalMoves[0]}", "spell_id": "${spellsLeft[0]}"}), or invoke "cast_spell".` : `Invoke "make_move" with your chosen move.`}`;
+## Action Directive
+${spellsLeft.length > 0 ? `👉 **PRIORITY ACTION**: Execute \`make_move\` with your chosen move AND \`"spell_id": "${spellsLeft[0]}"\` (e.g. \`{"move": "${params.legalMoves[0]}", "spell_id": "${spellsLeft[0]}"}\`), or invoke \`cast_spell\`.` : `Invoke \`make_move\` with your chosen move.`}`;
 }

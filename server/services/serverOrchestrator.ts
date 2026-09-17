@@ -190,12 +190,12 @@ export class ServerOrchestrator {
       }
     }
 
-    const parts: string[] = ['[GAME HISTORY SUMMARY]'];
-    if (moves.length) parts.push(`Your previous moves: ${moves.join(', ')}`);
-    if (actions.length) parts.push(`Variant actions used: ${actions.join('; ')}`);
-    if (errors.length) parts.push(`Past errors (avoid repeating): ${errors.join('; ')}`);
+    const parts: string[] = ['## Game History Summary'];
+    if (moves.length) parts.push(`- **Your Previous Moves**: ${moves.join(', ')}`);
+    if (actions.length) parts.push(`- **Variant Actions Used**: ${actions.join('; ')}`);
+    if (errors.length) parts.push(`- **Past Errors (Avoid Repeating)**: ${errors.join('; ')}`);
     if (this.gameMode !== 'standard') {
-      parts.push(`REMINDER: This is ${this.gameMode.replace(/_/g, ' ')} mode. Use your variant-specific tools every turn.`);
+      parts.push(`- **Variant Protocol**: Active mode is **${this.gameMode.replace(/_/g, ' ')}**. Use your variant-specific tools/parameters every turn.`);
     }
     return parts.join('\n');
   }
