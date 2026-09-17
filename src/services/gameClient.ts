@@ -6,29 +6,9 @@ import {
   NeuralLogEntry,
   TimeControl,
 } from '../types';
+import { useGameStore, LiveGameState, SpeedMode } from '../store/useGameStore';
 
-export type SpeedMode = '1x' | '0.5s' | 'instant';
-
-export interface LiveGameState {
-  matchId: string;
-  tournamentId: string | null;
-  roundNumber?: number;
-  matchIndex?: number;
-  whiteModel: ModelConfig;
-  blackModel: ModelConfig;
-  timeControl: TimeControl;
-  speedMode: SpeedMode;
-  fen: string;
-  turn: 'w' | 'b';
-  clocks: { w: number; b: number };
-  captures: { w: string[]; b: string[] };
-  moves: MoveRecord[];
-  status: 'idle' | 'active' | 'paused' | 'stepping' | 'finished';
-  result: GameResult | null;
-  inCheck: boolean;
-  neuralLogs: NeuralLogEntry[];
-  activeThinking: { side: 'w' | 'b' | null; modelName: string; thoughtText?: string };
-}
+export type { SpeedMode, LiveGameState };
 
 type Listener = () => void;
 
@@ -39,44 +19,23 @@ class GameClient {
   private onGameOverCallback?: (result: GameResult, match: any) => void;
 
   constructor() {
-    this.state = {
-      matchId: '',
-      tournamentId: null,
-      whiteModel: {
-        id: 'cx-gpt-6-astra',
-        name: 'GPT 6.0 Astra',
-        provider: 'openai',
-        modelIdentifier: 'cx/gpt-6-astra',
-        avatar: '🌟',
-        badgeColor: '#10b981',
-        playStyle: 'Frontier supreme intelligence',
-        description: 'GPT 6.0 Astra',
-      },
-      blackModel: {
-        id: 'ag-gemini-38-flash',
-        name: 'Gemini 3.8 Flash',
-        provider: 'openai',
-        modelIdentifier: 'ag/gemini-3.8-flash',
-        avatar: '⚡',
-        badgeColor: '#38bdf8',
-        playStyle: 'Ultra-fast frontier tactician',
-        description: 'Gemini 3.8 Flash',
-      },
-      timeControl: { name: 'Blitz 3+2', baseSeconds: 180, incrementSeconds: 2 },
-      speedMode: '0.5s',
-      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-      turn: 'w',
-      clocks: { w: 180000, b: 180000 },
-      captures: { w: [], b: [] },
-      moves: [],
-      status: 'idle',
-      result: null,
-      inCheck: false,
-      neuralLogs: [],
-      activeThinking: { side: null, modelName: '' },
-    };
+    this.state = useGameStore.getState().liveGame;
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => {
+        this.disconnect();
+      });
+    }
 
     this.connectSSE();
+  }
+
+  public disconnect(): void {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+    this.listeners.clear();
   }
 
   public subscribe(listener: Listener): () => void {
@@ -91,7 +50,7 @@ class GameClient {
   }
 
   public getState(): LiveGameState {
-    return this.state;
+    return useGameStore.getState().liveGame;
   }
 
   public setGameOverCallback(cb: (result: GameResult, match: any) => void): void {
@@ -110,6 +69,7 @@ class GameClient {
       try {
         const data = JSON.parse(e.data);
         this.state = { ...this.state, ...data.payload };
+        useGameStore.getState().setLiveGame(data.payload);
         this.notify();
       } catch (err) {
         console.error('SSE init error:', err);
@@ -123,6 +83,7 @@ class GameClient {
           ...this.state,
           activeThinking: data.payload,
         };
+        useGameStore.getState().updateThought(data.payload);
         this.notify();
       } catch (err) {
         console.error('SSE thought error:', err);
@@ -143,6 +104,15 @@ class GameClient {
           turn,
           inCheck,
         };
+
+        useGameStore.getState().updateOnMove({
+          moveRecord,
+          fen,
+          clocks,
+          captures,
+          turn,
+          inCheck,
+        });
 
         // Sound effects based on move events
         if (isCheckmate) {
@@ -168,6 +138,7 @@ class GameClient {
           ...this.state,
           clocks: payload.clocks,
         };
+        useGameStore.getState().updateClock(payload.clocks);
         this.notify();
       } catch {}
     });
@@ -179,6 +150,7 @@ class GameClient {
           ...this.state,
           neuralLogs: [...this.state.neuralLogs, payload],
         };
+        useGameStore.getState().appendNeuralLog(payload);
         this.notify();
       } catch (err) {
         console.error('SSE log error:', err);
@@ -189,6 +161,7 @@ class GameClient {
       try {
         const { payload } = JSON.parse(e.data);
         this.state = { ...this.state, ...payload };
+        useGameStore.getState().setLiveGame(payload);
         this.notify();
       } catch {}
     });
@@ -201,6 +174,10 @@ class GameClient {
           status: 'finished',
           result: payload.result,
         };
+        useGameStore.getState().setLiveGame({
+          status: 'finished',
+          result: payload.result,
+        });
         audioService.playCheckmate();
         this.notify();
 

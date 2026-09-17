@@ -11,6 +11,10 @@ import {
 } from 'lucide-react';
 import { ModelConfig, TimeControl } from '../types';
 import { SpeedMode } from '../services/GameOrchestrator';
+import { AlgorithmEngine } from '../services/algorithmEngine';
+
+const isAlgo = (m?: ModelConfig | null) =>
+  !!m && (m.provider === 'algorithm' || AlgorithmEngine.isAlgorithmModel(m.id));
 
 interface ArenaControlsProps {
   matchId?: string;
@@ -108,15 +112,24 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
           value={whiteModel.id}
           onChange={(e) => {
             const m = models.find((mod) => mod.id === e.target.value);
-            if (m) onSelectWhite(m);
+            if (m) {
+              if (isAlgo(m) && isAlgo(blackModel)) {
+                const firstAI = models.find((mod) => !isAlgo(mod));
+                if (firstAI) onSelectBlack(firstAI);
+              }
+              onSelectWhite(m);
+            }
           }}
           disabled={!isIdle}
         >
-          {models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name} {m.isSimulated ? '(Simulated)' : `[${m.provider}]`}
-            </option>
-          ))}
+          {models.map((m) => {
+            const blocked = isAlgo(m) && isAlgo(blackModel);
+            return (
+              <option key={m.id} value={m.id} disabled={blocked}>
+                {m.name} {blocked ? '(Algo vs Algo not allowed)' : m.isSimulated ? '(Simulated)' : `[${m.provider}]`}
+              </option>
+            );
+          })}
         </select>
       </div>
 
@@ -127,15 +140,24 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
           value={blackModel.id}
           onChange={(e) => {
             const m = models.find((mod) => mod.id === e.target.value);
-            if (m) onSelectBlack(m);
+            if (m) {
+              if (isAlgo(m) && isAlgo(whiteModel)) {
+                const firstAI = models.find((mod) => !isAlgo(mod));
+                if (firstAI) onSelectWhite(firstAI);
+              }
+              onSelectBlack(m);
+            }
           }}
           disabled={!isIdle}
         >
-          {models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name} {m.isSimulated ? '(Simulated)' : `[${m.provider}]`}
-            </option>
-          ))}
+          {models.map((m) => {
+            const blocked = isAlgo(m) && isAlgo(whiteModel);
+            return (
+              <option key={m.id} value={m.id} disabled={blocked}>
+                {m.name} {blocked ? '(Algo vs Algo not allowed)' : m.isSimulated ? '(Simulated)' : `[${m.provider}]`}
+              </option>
+            );
+          })}
         </select>
       </div>
 

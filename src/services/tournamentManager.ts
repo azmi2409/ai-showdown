@@ -8,8 +8,18 @@ import {
   TournamentState,
   TournamentType,
 } from '../types';
+import { AlgorithmEngine } from './algorithmEngine';
 
 export class TournamentManager {
+  public static isAlgo(m?: ModelConfig | null): boolean {
+    if (!m) return false;
+    return (
+      m.provider === 'algorithm' ||
+      AlgorithmEngine.isAlgorithmModel(m.id) ||
+      AlgorithmEngine.isAlgorithmModel(m.modelIdentifier)
+    );
+  }
+
   private static shuffle<T>(array: T[]): T[] {
     const copy = [...array];
     for (let i = copy.length - 1; i > 0; i--) {
@@ -81,6 +91,24 @@ export class TournamentManager {
     const slots: (ModelConfig | null)[] = new Array(bracketSize).fill(null);
     for (let i = 0; i < seeded.length; i++) {
       slots[i] = seeded[i];
+    }
+
+    // STRICT CONSTRAINT: NEVER allow Algo vs Algo pairing in initial bracket seeding
+    for (let i = 0; i < bracketSize / 2; i++) {
+      const oppIdx = bracketSize - 1 - i;
+      if (this.isAlgo(slots[i]) && this.isAlgo(slots[oppIdx])) {
+        // Swap slots[oppIdx] with another slot that isn't an algo bot and isn't paired with an algo bot
+        for (let k = 0; k < bracketSize / 2; k++) {
+          if (k === i) continue;
+          const kOpp = bracketSize - 1 - k;
+          if (!this.isAlgo(slots[k]) && !this.isAlgo(slots[kOpp])) {
+            const temp = slots[oppIdx];
+            slots[oppIdx] = slots[k];
+            slots[k] = temp;
+            break;
+          }
+        }
+      }
     }
 
     const rounds: TournamentRound[] = [];
@@ -196,6 +224,11 @@ export class TournamentManager {
         const teamB = list[numTeams - 1 - i];
 
         if (teamA.id !== 'bye' && teamB.id !== 'bye') {
+          // STRICT CONSTRAINT: Never schedule Algorithm vs Algorithm matchups
+          if (this.isAlgo(teamA) && this.isAlgo(teamB)) {
+            continue;
+          }
+
           // Alternate white and black
           const white = r % 2 === 0 ? teamA : teamB;
           const black = r % 2 === 0 ? teamB : teamA;

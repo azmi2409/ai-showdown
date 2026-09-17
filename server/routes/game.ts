@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { serverOrchestrator } from '../services/serverOrchestrator';
 import { sseHub } from '../services/sseHub';
+import { AlgorithmEngine } from '../../src/services/algorithmEngine';
 
 export const gameRouter = Router();
 
@@ -17,6 +18,17 @@ gameRouter.get('/state', (_req: Request, res: Response) => {
 // POST /api/game/start - Start or restart game
 gameRouter.post('/start', async (req: Request, res: Response) => {
   try {
+    const { whiteModel, blackModel } = req.body;
+    const isAlgo = (m?: any) =>
+      m && (m.provider === 'algorithm' || AlgorithmEngine.isAlgorithmModel(m.id) || AlgorithmEngine.isAlgorithmModel(m.modelIdentifier));
+
+    if (isAlgo(whiteModel) && isAlgo(blackModel)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Algorithm vs Algorithm duels are not permitted. At least one participant must be an AI model.',
+      });
+    }
+
     const state = await serverOrchestrator.startMatch(req.body);
     res.json({ success: true, state });
   } catch (err: any) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   History,
   RotateCcw,
@@ -41,6 +41,8 @@ export const MatchesView: React.FC<MatchesViewProps> = () => {
     }
   };
 
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     let active = true;
     apiService.getMatches({ limit: 100 }).then((data) => {
@@ -51,13 +53,17 @@ export const MatchesView: React.FC<MatchesViewProps> = () => {
     });
     return () => {
       active = false;
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
     };
   }, []);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleDownloadPGN = (match: MatchRecord, e: React.MouseEvent) => {
