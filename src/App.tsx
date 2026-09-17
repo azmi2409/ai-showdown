@@ -27,10 +27,7 @@ import {
 } from './types';
 
 export const App: React.FC = () => {
-  // Navigation
-  const [activeTab, setActiveTab] = useState<ActiveTab>('arena');
-
-  // Stored state
+  // Stored models & configuration
   const [allModels, setAllModels] = useState<ModelConfig[]>(() => storageService.getAllModels());
   const [apiKeys, setApiKeys] = useState<ApiKeysConfig>(() => storageService.getApiKeys());
   const [metrics, setMetrics] = useState<Record<string, BenchmarkMetrics>>(() =>
@@ -40,23 +37,50 @@ export const App: React.FC = () => {
     storageService.getCustomModels()
   );
 
+  // Retrieve persisted selections & saved game state
+  const initialSelections = useMemo(() => storageService.getArenaSelections(), []);
+
+  // Navigation
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    () => initialSelections?.activeTab || 'arena'
+  );
+
   // Match settings
-  const [whiteModel, setWhiteModel] = useState<ModelConfig>(
-    () => allModels[0] || DEFAULT_MODELS[0]
-  );
-  const [blackModel, setBlackModel] = useState<ModelConfig>(
-    () => allModels[2] || allModels[1] || DEFAULT_MODELS[1]
-  );
-  const [timeControl, setTimeControl] = useState<TimeControl>({
-    name: 'Blitz 3+2',
-    baseSeconds: 180,
-    incrementSeconds: 2,
+  const [whiteModel, setWhiteModel] = useState<ModelConfig>(() => {
+    if (initialSelections?.whiteModelId) {
+      const found = allModels.find((m) => m.id === initialSelections.whiteModelId);
+      if (found) return found;
+    }
+    return allModels[0] || DEFAULT_MODELS[0];
   });
-  const [speedMode, setSpeedMode] = useState<SpeedMode>('0.5s');
-  const [audioEnabled, setAudioEnabled] = useState<boolean>(true);
+
+  const [blackModel, setBlackModel] = useState<ModelConfig>(() => {
+    if (initialSelections?.blackModelId) {
+      const found = allModels.find((m) => m.id === initialSelections.blackModelId);
+      if (found) return found;
+    }
+    return allModels[2] || allModels[1] || DEFAULT_MODELS[1];
+  });
+
+  const [timeControl, setTimeControl] = useState<TimeControl>(
+    () =>
+      initialSelections?.timeControl || {
+        name: 'Blitz 3+2',
+        baseSeconds: 180,
+        incrementSeconds: 2,
+      }
+  );
+  const [speedMode, setSpeedMode] = useState<SpeedMode>(
+    () => (initialSelections?.speedMode as SpeedMode) || '0.5s'
+  );
+  const [audioEnabled, setAudioEnabled] = useState<boolean>(
+    () => initialSelections?.audioEnabled ?? true
+  );
 
   // Tournament state
-  const [tournament, setTournament] = useState<TournamentState | null>(null);
+  const [tournament, setTournament] = useState<TournamentState | null>(() =>
+    storageService.getSavedTournament()
+  );
   const [isAutoRunningTournament, setIsAutoRunningTournament] = useState(false);
   const currentTourneyMatchRef = useRef<{
     match: TournamentMatch;
@@ -64,11 +88,19 @@ export const App: React.FC = () => {
     matchIndex: number;
   } | null>(null);
 
-  // Telemetry logs
-  const [neuralLogs, setNeuralLogs] = useState<NeuralLogEntry[]>([]);
+  // Initialize GameStateStore & Orchestrator with persistence restoration
+  const store = useMemo(() => {
+    const saved = storageService.getSavedGameState();
+    const gs = new GameStateStore(saved?.timeControl || initialSelections?.timeControl || timeControl);
+    if (saved) {
+      gs.restore(saved);
+    }
+    return gs;
+  }, []);
 
-  // Initialize GameStateStore & Orchestrator
-  const store = useMemo(() => new GameStateStore(timeControl), []);
+  // Telemetry logs
+  const [neuralLogs, setNeuralLogs] = useState<NeuralLogEntry[]>(() => store.getNeuralLogs());
+
   const orchestrator = useMemo(
     () => new GameOrchestrator(store, whiteModel, blackModel, apiKeys),
     []
@@ -96,6 +128,44 @@ export const App: React.FC = () => {
     orchestrator.setApiKeys(apiKeys);
   }, [apiKeys]);
 
+  // Auto-persist arena selections
+  useEffect(() => {
+    storageService.saveArenaSelections({
+      whiteModelId: whiteModel.id,
+      blackModelId: blackModel.id,
+      timeControl,
+      speedMode,
+      audioEnabled,
+      activeTab,
+    });
+  }, [whiteModel.id, blackModel.id, timeControl, speedMode, audioEnabled, activeTab]);
+
+  // Auto-persist tournament state
+  useEffect(() => {
+    storageService.saveTournament(tournament);
+  }, [tournament]);
+
+  // Sync audio enabled state
+  useEffect(() => {
+    audioService.setEnabled(audioEnabled);
+  }, [audioEnabled]);
+
+  // Auto-persist game state on store updates
+  useEffect(() => {
+    let timer: any;
+    const unsubscribe = store.subscribe(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        storageService.saveGameState(store.serialize());
+      }, 250);
+    });
+
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [store]);
+
   // Handle Game Finished Callback
   useEffect(() => {
     orchestrator.setGameFinishedCallback((result: GameResult) => {
@@ -112,6 +182,7 @@ export const App: React.FC = () => {
           result
         );
         setTournament(updatedTourney);
+        storageService.saveTournament(updatedTourney);
         currentTourneyMatchRef.current = null;
 
         // Auto-run next match after 2.5s delay if auto-running is enabled
@@ -153,6 +224,7 @@ export const App: React.FC = () => {
   const handleResetGame = () => {
     orchestrator.stopGame();
     store.reset(timeControl);
+    storageService.saveGameState(store.serialize());
     setNeuralLogs([]);
   };
 
@@ -183,6 +255,7 @@ export const App: React.FC = () => {
   ) => {
     const newTourney = TournamentManager.createTournament(title, type, models, tc);
     setTournament(newTourney);
+    storageService.saveTournament(newTourney);
   };
 
   const launchTournamentMatch = (
@@ -199,7 +272,9 @@ export const App: React.FC = () => {
 
     // Reset store and start
     orchestrator.stopGame();
-    store.reset(tournament?.timeControl || timeControl);
+    const matchTc = tournament?.timeControl || timeControl;
+    store.reset(matchTc);
+    storageService.saveGameState(store.serialize());
     setNeuralLogs([]);
 
     // Switch view to arena so user can see the live match!
@@ -229,6 +304,7 @@ export const App: React.FC = () => {
     setIsAutoRunningTournament(false);
     currentTourneyMatchRef.current = null;
     setTournament(null);
+    storageService.saveTournament(null);
   };
 
   // Settings Actions
@@ -250,11 +326,15 @@ export const App: React.FC = () => {
   };
 
   const handleResetAllData = () => {
+    orchestrator.stopGame();
     storageService.resetAllData();
     setMetrics(storageService.getBenchmarkMetrics());
     setCustomModels([]);
     setAllModels(storageService.getAllModels());
     setTournament(null);
+    store.reset(timeControl);
+    storageService.saveGameState(store.serialize());
+    setNeuralLogs([]);
   };
 
   // Derived state from store
@@ -294,14 +374,17 @@ export const App: React.FC = () => {
               onSelectWhite={(m) => {
                 setWhiteModel(m);
                 store.reset(timeControl);
+                storageService.saveGameState(store.serialize());
               }}
               onSelectBlack={(m) => {
                 setBlackModel(m);
                 store.reset(timeControl);
+                storageService.saveGameState(store.serialize());
               }}
               onSelectTimeControl={(tc) => {
                 setTimeControl(tc);
                 store.reset(tc);
+                storageService.saveGameState(store.serialize());
               }}
               onSetSpeedMode={setSpeedMode}
               onToggleAudio={handleToggleAudio}

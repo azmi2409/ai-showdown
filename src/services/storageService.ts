@@ -1,11 +1,20 @@
-import { ApiKeysConfig, BenchmarkMetrics, ModelConfig, TimeControl } from '../types';
+import {
+  ApiKeysConfig,
+  ArenaSelections,
+  BenchmarkMetrics,
+  ModelConfig,
+  SerializedGameState,
+  TournamentState,
+} from '../types';
 import { DEFAULT_MODELS } from './defaultModels';
 
 const KEYS_STORAGE_KEY = 'ai_showdown_api_keys';
 const METRICS_STORAGE_KEY = 'ai_showdown_benchmark_metrics';
 const CUSTOM_MODELS_STORAGE_KEY = 'ai_showdown_custom_models';
-const TIME_CONTROL_STORAGE_KEY = 'ai_showdown_time_control';
 const ARCHIVE_STORAGE_KEY = 'ai_showdown_game_archive';
+const ARENA_SELECTIONS_STORAGE_KEY = 'ai_showdown_arena_selections';
+const SAVED_GAME_STATE_KEY = 'ai_showdown_saved_game_state';
+const TOURNAMENT_STORAGE_KEY = 'ai_showdown_tournament';
 
 export interface ArchivedGame {
   id: string;
@@ -236,10 +245,74 @@ class StorageService {
     localStorage.setItem(ARCHIVE_STORAGE_KEY, JSON.stringify(list));
   }
 
+  public getArenaSelections(): ArenaSelections | null {
+    try {
+      const data = localStorage.getItem(ARENA_SELECTIONS_STORAGE_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  public saveArenaSelections(selections: Partial<ArenaSelections>): void {
+    try {
+      const current = this.getArenaSelections() || {};
+      const updated = { ...current, ...selections };
+      localStorage.setItem(ARENA_SELECTIONS_STORAGE_KEY, JSON.stringify(updated));
+    } catch (err) {
+      console.error('Failed to save arena selections:', err);
+    }
+  }
+
+  public getSavedGameState(): SerializedGameState | null {
+    try {
+      const data = localStorage.getItem(SAVED_GAME_STATE_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  public saveGameState(state: SerializedGameState): void {
+    try {
+      localStorage.setItem(SAVED_GAME_STATE_KEY, JSON.stringify(state));
+    } catch (err) {
+      console.error('Failed to save game state:', err);
+    }
+  }
+
+  public clearSavedGameState(): void {
+    localStorage.removeItem(SAVED_GAME_STATE_KEY);
+  }
+
+  public getSavedTournament(): TournamentState | null {
+    try {
+      const data = localStorage.getItem(TOURNAMENT_STORAGE_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  public saveTournament(tournament: TournamentState | null): void {
+    try {
+      if (!tournament) {
+        localStorage.removeItem(TOURNAMENT_STORAGE_KEY);
+      } else {
+        localStorage.setItem(TOURNAMENT_STORAGE_KEY, JSON.stringify(tournament));
+      }
+    } catch (err) {
+      console.error('Failed to save tournament state:', err);
+    }
+  }
+
   public resetAllData(): void {
     localStorage.removeItem(METRICS_STORAGE_KEY);
     localStorage.removeItem(ARCHIVE_STORAGE_KEY);
     localStorage.removeItem(CUSTOM_MODELS_STORAGE_KEY);
+    localStorage.removeItem(ARENA_SELECTIONS_STORAGE_KEY);
+    localStorage.removeItem(SAVED_GAME_STATE_KEY);
+    localStorage.removeItem(TOURNAMENT_STORAGE_KEY);
   }
 }
 

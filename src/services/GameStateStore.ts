@@ -4,6 +4,7 @@ import {
   GameResult,
   MoveRecord,
   NeuralLogEntry,
+  SerializedGameState,
   TimeControl,
 } from '../types';
 
@@ -461,5 +462,51 @@ export class GameStateStore {
     }
 
     return [...headers, moveText.trim()].join('\n');
+  }
+
+  public serialize(): SerializedGameState {
+    return {
+      fen: this.fen,
+      turn: this.turn,
+      moves: [...this.moves],
+      clocks: { ...this.clocks },
+      timeControl: { ...this.timeControl },
+      captures: { w: [...this.captures.w], b: [...this.captures.b] },
+      status: this.status,
+      result: this.result ? { ...this.result } : null,
+      agentMemory: {
+        w: [...this.agentMemory.w],
+        b: [...this.agentMemory.b],
+      },
+      illegalAttempts: { ...this.illegalAttempts },
+      neuralLogs: [...this.neuralLogs],
+    };
+  }
+
+  public restore(snapshot: SerializedGameState): boolean {
+    try {
+      this.chess = new Chess(snapshot.fen);
+      this.fen = snapshot.fen;
+      this.turn = snapshot.turn;
+      this.moves = snapshot.moves || [];
+      this.clocks = snapshot.clocks || {
+        w: snapshot.timeControl.baseSeconds * 1000,
+        b: snapshot.timeControl.baseSeconds * 1000,
+      };
+      this.timeControl = snapshot.timeControl;
+      this.captures = snapshot.captures || { w: [], b: [] };
+      // If was active when refreshed, restore as paused so user can deliberately resume
+      this.status = snapshot.status === 'active' ? 'paused' : snapshot.status;
+      this.result = snapshot.result;
+      this.agentMemory = snapshot.agentMemory || { w: [], b: [] };
+      this.illegalAttempts = snapshot.illegalAttempts || { w: 0, b: 0 };
+      this.neuralLogs = snapshot.neuralLogs || [];
+      this.activeThinking = { side: null, modelName: '' };
+      this.publish('all');
+      return true;
+    } catch (err) {
+      console.error('Failed to restore GameStateStore from snapshot:', err);
+      return false;
+    }
   }
 }

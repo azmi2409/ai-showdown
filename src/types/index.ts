@@ -180,3 +180,30 @@ export interface ApiKeysConfig {
   xai?: string;
   ollamaUrl?: string;
 }
+
+export interface SerializedGameState {
+  fen: string;
+  turn: 'w' | 'b';
+  moves: MoveRecord[];
+  clocks: { w: number; b: number };
+  timeControl: TimeControl;
+  captures: { w: string[]; b: string[] };
+  status: 'idle' | 'active' | 'paused' | 'stepping' | 'finished';
+  result: GameResult | null;
+  agentMemory: {
+    w: ConversationMessage[];
+    b: ConversationMessage[];
+  };
+  illegalAttempts: { w: number; b: number };
+  neuralLogs: NeuralLogEntry[];
+}
+
+export interface ArenaSelections {
+  whiteModelId?: string;
+  blackModelId?: string;
+  timeControl?: TimeControl;
+  speedMode?: '1x' | '0.5s' | 'instant';
+  audioEnabled?: boolean;
+  activeTab?: 'arena' | 'tournament' | 'leaderboard' | 'settings';
+}
+

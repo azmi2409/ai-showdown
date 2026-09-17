@@ -19,6 +19,7 @@ export class GameOrchestrator {
   private clockTimerId: any = null;
   private isStepping: boolean = false;
   private isPaused: boolean = false;
+  private isLoopRunning: boolean = false;
   private abortController: AbortController | null = null;
   private gameStartTime: number = 0;
   private neuralLogs: NeuralLogEntry[] = [];
@@ -150,11 +151,13 @@ export class GameOrchestrator {
   }
 
   private async runTurnLoop(): Promise<void> {
-    while (this.store.getStatus() === 'active') {
-      if (this.isPaused) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        continue;
-      }
+    this.isLoopRunning = true;
+    try {
+      while (this.store.getStatus() === 'active') {
+        if (this.isPaused) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          continue;
+        }
 
       const turn = this.store.getTurn();
       const currentModel = turn === 'w' ? this.whiteModel : this.blackModel;
@@ -403,6 +406,9 @@ export class GameOrchestrator {
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
+  } finally {
+    this.isLoopRunning = false;
+  }
 
     if (this.store.getStatus() === 'finished') {
       this.handleGameFinished();
@@ -412,6 +418,10 @@ export class GameOrchestrator {
   public stepMove(): void {
     this.isStepping = true;
     this.isPaused = false;
+    if (!this.isLoopRunning && this.store.getStatus() !== 'finished') {
+      this.store.setStatus('active');
+      this.runTurnLoop();
+    }
   }
 
   public pauseGame(): void {
@@ -422,6 +432,29 @@ export class GameOrchestrator {
   public resumeGame(): void {
     this.isPaused = false;
     this.store.setStatus('active');
+    this.startClock();
+
+    if (!this.isLoopRunning && this.store.getStatus() === 'active') {
+      const turn = this.store.getTurn();
+      const currentMemory = this.store.getMemory(turn);
+      if (currentMemory.length === 0) {
+        const whiteSystemPrompt = `You are playing chess as WHITE against ${this.blackModel.name}. Use the provided tools (get_board_state, get_legal_moves, make_move, resign) to interact with the board. Calculate deeply and make legal moves in Standard Algebraic Notation (SAN).`;
+        const blackSystemPrompt = `You are playing chess as BLACK against ${this.whiteModel.name}. Use the provided tools (get_board_state, get_legal_moves, make_move, resign) to interact with the board. Calculate deeply and make legal moves in Standard Algebraic Notation (SAN).`;
+        this.store.appendMemory('w', { role: 'system', content: whiteSystemPrompt });
+        this.store.appendMemory('b', { role: 'system', content: blackSystemPrompt });
+      }
+      const lastMsg = currentMemory[currentMemory.length - 1];
+      if (!lastMsg || lastMsg.role !== 'user') {
+        const legalMoves = this.store.getLegalMoves();
+        this.store.appendMemory(turn, {
+          role: 'user',
+          content: `Match resumed. You are ${turn === 'w' ? 'WHITE' : 'BLACK'}. Current position (FEN): ${this.store.getFEN()}.\nLegal moves available: ${legalMoves.join(
+            ', '
+          )}.\nInvoke make_move with your chosen move.`,
+        });
+      }
+      this.runTurnLoop();
+    }
   }
 
   public forfeitGame(side: 'w' | 'b'): void {
@@ -437,6 +470,7 @@ export class GameOrchestrator {
     }
     this.isPaused = false;
     this.isStepping = false;
+    this.isLoopRunning = false;
   }
 
   private handleGameFinished(): void {
