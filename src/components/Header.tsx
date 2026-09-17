@@ -1,7 +1,7 @@
 import React from 'react';
-import { Swords, Trophy, BarChart3, Settings, Zap } from 'lucide-react';
+import { Swords, Trophy, BarChart3, Settings, History, Zap } from 'lucide-react';
 
-export type ActiveTab = 'arena' | 'tournament' | 'leaderboard' | 'settings';
+export type ActiveTab = 'arena' | 'tournament' | 'matches' | 'leaderboard' | 'settings';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -48,6 +48,14 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Trophy size={16} />
           <span>Tournament</span>
+        </button>
+
+        <button
+          className={`nav-tab-btn ${activeTab === 'matches' ? 'active' : ''}`}
+          onClick={() => onSelectTab('matches')}
+        >
+          <History size={16} />
+          <span>Matches</span>
         </button>
 
         <button

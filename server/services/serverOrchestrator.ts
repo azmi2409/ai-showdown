@@ -367,18 +367,42 @@ export class ServerOrchestrator {
                     thoughtText: capturedReasoning,
                   };
                   sseHub.broadcast('thought', this.activeThinking);
+                } else if (chunk.toolArgs) {
+                  try {
+                    const match = chunk.toolArgs.match(/"reasoning"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)/);
+                    if (match && match[1]) {
+                      const extracted = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+                      capturedReasoning = extracted;
+                      this.activeThinking = {
+                        side: turn,
+                        modelName: currentModel.name,
+                        thoughtText: capturedReasoning,
+                      };
+                      sseHub.broadcast('thought', this.activeThinking);
+                    }
+                  } catch {}
                 }
               }
             );
 
             this.agentMemory[turn].push(response.rawAssistantMessage);
 
-            if (response.textContent && !capturedReasoning) {
+            // Extract reasoning from tool calls if not already captured
+            const toolReasoning = response.toolCalls
+              .map((tc) => tc.arguments?.reasoning)
+              .find(Boolean);
+
+            if (toolReasoning && !capturedReasoning) {
+              capturedReasoning = toolReasoning;
+            } else if (response.textContent && !capturedReasoning) {
               capturedReasoning = response.textContent;
+            }
+
+            if (capturedReasoning) {
               this.activeThinking = {
                 side: turn,
                 modelName: currentModel.name,
-                thoughtText: response.textContent,
+                thoughtText: capturedReasoning,
               };
               sseHub.broadcast('thought', this.activeThinking);
             }

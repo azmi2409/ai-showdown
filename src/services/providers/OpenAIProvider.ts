@@ -107,8 +107,13 @@ export class OpenAIProvider implements AgentProvider {
             const delta = choice?.delta;
 
             if (delta) {
-              // 1. Thinking / Reasoning delta
-              const reasoningChunk = delta.reasoning_content || '';
+              // 1. Thinking / Reasoning delta (support multiple provider formats)
+              const reasoningChunk =
+                delta.reasoning_content ||
+                delta.reasoning ||
+                delta.thought ||
+                delta.thinking ||
+                '';
               if (reasoningChunk) {
                 accumulatedReasoning += reasoningChunk;
                 if (onStreamChunk) {

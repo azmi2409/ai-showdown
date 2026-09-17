@@ -198,12 +198,50 @@ export interface SerializedGameState {
   neuralLogs: NeuralLogEntry[];
 }
 
+export interface MatchRecord {
+  id: string;
+  tournamentId?: string | null;
+  roundNumber?: number;
+  matchIndex?: number;
+  whiteModelId: string;
+  whiteModelName: string;
+  blackModelId: string;
+  blackModelName: string;
+  winner: 'w' | 'b' | 'draw';
+  reason: string;
+  movesCount: number;
+  durationMs: number;
+  pgn: string;
+  finalFen: string;
+  timeControl: TimeControl;
+  telemetry: {
+    whiteIllegalMoves: number;
+    blackIllegalMoves: number;
+    whiteAvgLatencyMs: number;
+    blackAvgLatencyMs: number;
+    whiteToolCallsCount: number;
+    blackToolCallsCount: number;
+    whiteForfeit?: boolean;
+    blackForfeit?: boolean;
+    recoveryAssistsCount?: number;
+  };
+  eloChange: {
+    whiteDelta: number;
+    blackDelta: number;
+    whiteBefore: number;
+    blackBefore: number;
+    whiteAfter: number;
+    blackAfter: number;
+  };
+  createdAt: number;
+}
+
 export interface ArenaSelections {
   whiteModelId?: string;
   blackModelId?: string;
   timeControl?: TimeControl;
   speedMode?: '1x' | '0.5s' | 'instant';
   audioEnabled?: boolean;
-  activeTab?: 'arena' | 'tournament' | 'leaderboard' | 'settings';
+  activeTab?: 'arena' | 'tournament' | 'matches' | 'leaderboard' | 'settings';
 }
 

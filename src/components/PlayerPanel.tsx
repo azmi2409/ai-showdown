@@ -74,37 +74,15 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
 
           {/* Live Thinking Status & Thought Bubble */}
           {isThinking && (
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                marginTop: '4px',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                background: 'rgba(124, 58, 237, 0.25)',
-                border: '1px solid var(--neon-violet)',
-                fontSize: '11px',
-                color: '#c4b5fd',
-                animation: 'pulse-dot 1.5s infinite',
-              }}
-            >
-              <span>🧠 Calculating move...</span>
+            <div className="calculating-badge">
+              <span className="calculating-dot" />
+              <span>Calculating move...</span>
             </div>
           )}
 
           {!isThinking && thoughtText && (
             <div
-              style={{
-                fontSize: '11px',
-                color: '#38bdf8',
-                fontStyle: 'italic',
-                marginTop: '3px',
-                maxWidth: '320px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
+              className="player-thought-bubble"
               title={thoughtText}
             >
               💭 "{thoughtText}"

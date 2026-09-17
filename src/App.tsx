@@ -7,6 +7,7 @@ import { ArenaControls } from './components/ArenaControls';
 import { MoveHistory } from './components/MoveHistory';
 import { NeuralFeed } from './components/NeuralFeed';
 import { TournamentView } from './components/TournamentView';
+import { MatchesView } from './components/MatchesView';
 import { LeaderboardView } from './components/LeaderboardView';
 import { SettingsView } from './components/SettingsView';
 import { gameClient, SpeedMode } from './services/gameClient';
@@ -179,7 +180,9 @@ export const App: React.FC = () => {
 
       setActiveTab('arena');
 
+      const tourneyMatchId = `match_${Date.now()}_r${roundIndex + 1}_m${matchIndex + 1}`;
       gameClient.startGame({
+        matchId: tourneyMatchId,
         whiteModel: match.white,
         blackModel: match.black,
         timeControl: matchTc,
@@ -236,7 +239,9 @@ export const App: React.FC = () => {
 
   // Arena Actions
   const handleStartGame = () => {
+    const newMatchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     gameClient.startGame({
+      matchId: newMatchId,
       whiteModel,
       blackModel,
       timeControl,
@@ -390,6 +395,7 @@ export const App: React.FC = () => {
           {/* Left Column: Match Deck Controls & Move History */}
           <section className="arena-sidebar-left">
             <ArenaControls
+              matchId={liveGame.matchId}
               models={allModels}
               whiteModel={liveGame.status === 'idle' ? whiteModel : liveGame.whiteModel || whiteModel}
               blackModel={liveGame.status === 'idle' ? blackModel : liveGame.blackModel || blackModel}
@@ -508,6 +514,11 @@ export const App: React.FC = () => {
           isAutoRunning={isAutoRunningTournament}
           onResetTournament={handleResetTournament}
         />
+      )}
+
+      {/* Matches History View */}
+      {activeTab === 'matches' && (
+        <MatchesView />
       )}
 
       {/* Leaderboard View */}

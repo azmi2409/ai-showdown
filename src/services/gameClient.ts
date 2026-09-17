@@ -219,6 +219,7 @@ class GameClient {
 
   // --- Backend Control Dispatchers ---
   public async startGame(payload: {
+    matchId?: string;
     whiteModel?: ModelConfig;
     blackModel?: ModelConfig;
     timeControl?: TimeControl;

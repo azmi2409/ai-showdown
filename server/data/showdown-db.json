@@ -77,6 +77,44 @@
         "kFactorBlack": 40
       },
       "createdAt": 1789655645856
+    },
+    {
+      "id": "match_1789656056396_f545z",
+      "tournamentId": "tourney_1789653860358",
+      "whiteModelId": "ag-gemini-37-flash-medium",
+      "whiteModelName": "Gemini 3.7 Flash (Medium)",
+      "blackModelId": "ag-gemini-36-flash-medium",
+      "blackModelName": "Gemini 3.6 Flash (Medium)",
+      "winner": "draw",
+      "reason": "threefold",
+      "movesCount": 61,
+      "durationMs": 183806,
+      "pgn": "[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. a3 Nc6 2. a4 Rb8 3. a5 Ra8 4. a6 Rb8 5. axb7 Rxb7 6. b3 Nh6 7. b4 Rg8 8. b5 Rh8 9. b6 Rg8 10. bxa7 Rh8 11. a8=N Rg8 12. Nxc7+ Qxc7 13. c3 Kd8 14. c4 Ke8 15. c5 Kd8 16. d3 Ke8 17. d4 Kd8 18. d5 Ke8 19. d6 Kd8 20. dxc7+ Ke8 21. e3 Rh8 22. e4 Rg8 23. e5 Rh8 24. e6 Rg8 25. exd7+ Bxd7 26. c8=N Kd8 27. Nxe7 Ke8 28. Nc8 Kd8 29. Ne7 Ke8 30. Nc8 Kd8 31. Ne7 *",
+      "finalFen": "3k1br1/1r1bNppp/2n4n/2P5/8/8/5PPP/RNBQKBNR b KQ - 8 31",
+      "timeControl": {
+        "name": "Blitz 3+0",
+        "baseSeconds": 180,
+        "incrementSeconds": 0
+      },
+      "telemetry": {
+        "whiteIllegalMoves": 31,
+        "blackIllegalMoves": 30,
+        "whiteAvgLatencyMs": 0,
+        "blackAvgLatencyMs": 0,
+        "whiteToolCallsCount": 0,
+        "blackToolCallsCount": 0
+      },
+      "eloChange": {
+        "whiteDelta": -5,
+        "blackDelta": 5,
+        "whiteBefore": 2510,
+        "blackBefore": 2460,
+        "whiteAfter": 2505,
+        "blackAfter": 2465,
+        "kFactorWhite": 40,
+        "kFactorBlack": 40
+      },
+      "createdAt": 1789656240212
     }
   ],
   "tournaments": [],
@@ -434,14 +472,14 @@
       "modelId": "ag-gemini-37-flash-medium",
       "modelName": "Gemini 3.7 Flash (Medium)",
       "provider": "openai",
-      "elo": 2510,
+      "elo": 2505,
       "peakElo": 2510,
-      "gamesPlayed": 0,
+      "gamesPlayed": 1,
       "wins": 0,
       "losses": 0,
-      "draws": 0,
-      "illegalMoveAttempts": 0,
-      "totalMovesMade": 0,
+      "draws": 1,
+      "illegalMoveAttempts": 31,
+      "totalMovesMade": 31,
       "totalLatencyMs": 0,
       "totalToolCalls": 0,
       "forfeits": 0,
@@ -452,6 +490,12 @@
           "matchId": "initial",
           "delta": 0,
           "timestamp": 1789655661360
+        },
+        {
+          "elo": 2505,
+          "matchId": "match_1789656056396_f545z",
+          "delta": -5,
+          "timestamp": 1789656240212
         }
       ]
     },
@@ -459,14 +503,14 @@
       "modelId": "ag-gemini-36-flash-medium",
       "modelName": "Gemini 3.6 Flash (Medium)",
       "provider": "openai",
-      "elo": 2460,
-      "peakElo": 2460,
-      "gamesPlayed": 0,
+      "elo": 2465,
+      "peakElo": 2465,
+      "gamesPlayed": 1,
       "wins": 0,
       "losses": 0,
-      "draws": 0,
-      "illegalMoveAttempts": 0,
-      "totalMovesMade": 0,
+      "draws": 1,
+      "illegalMoveAttempts": 30,
+      "totalMovesMade": 30,
       "totalLatencyMs": 0,
       "totalToolCalls": 0,
       "forfeits": 0,
@@ -477,6 +521,12 @@
           "matchId": "initial",
           "delta": 0,
           "timestamp": 1789655661360
+        },
+        {
+          "elo": 2465,
+          "matchId": "match_1789656056396_f545z",
+          "delta": 5,
+          "timestamp": 1789656240212
         }
       ]
     },

@@ -13,6 +13,7 @@ import { ModelConfig, TimeControl } from '../types';
 import { SpeedMode } from '../services/GameOrchestrator';
 
 interface ArenaControlsProps {
+  matchId?: string;
   models: ModelConfig[];
   whiteModel: ModelConfig;
   blackModel: ModelConfig;
@@ -43,6 +44,7 @@ const TIME_CONTROLS: TimeControl[] = [
 ];
 
 export const ArenaControls: React.FC<ArenaControlsProps> = ({
+  matchId,
   models,
   whiteModel,
   blackModel,
@@ -69,8 +71,24 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
   return (
     <div className="card-panel">
       <div className="panel-header">
-        <div className="panel-title">
+        <div className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>Match Deck</span>
+          {matchId && (
+            <span
+              style={{
+                fontSize: '10px',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--neon-cyan)',
+                background: 'rgba(6, 182, 212, 0.12)',
+                border: '1px solid rgba(6, 182, 212, 0.3)',
+                padding: '2px 6px',
+                borderRadius: '4px',
+              }}
+              title={`Match ID: ${matchId}`}
+            >
+              #{matchId.replace(/^match_/, '').slice(0, 10)}
+            </span>
+          )}
         </div>
         <button
           className="btn btn-secondary"

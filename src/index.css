@@ -431,6 +431,52 @@ body {
   margin-left: 4px;
 }
 
+.calculating-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background: rgba(124, 58, 237, 0.16);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  font-size: 11px;
+  font-weight: 500;
+  color: #c4b5fd;
+  letter-spacing: 0.2px;
+}
+
+.calculating-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a855f7;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.8);
+  animation: thinking-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes thinking-glow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.player-thought-bubble {
+  font-size: 11px;
+  color: #38bdf8;
+  font-style: italic;
+  margin-top: 3px;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Digital Chess Clock */
 .chess-clock {
   font-family: var(--font-mono);
