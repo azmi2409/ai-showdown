@@ -1,5 +1,6 @@
 import { audioService } from './audioService';
 import {
+  GameMode,
   GameResult,
   ModelConfig,
   MoveRecord,
@@ -201,6 +202,9 @@ class GameClient {
     blackModel?: ModelConfig;
     timeControl?: TimeControl;
     speedMode?: SpeedMode;
+    gameMode?: GameMode;
+    whiteModifiers?: string[];
+    blackModifiers?: string[];
     tournamentId?: string | null;
     roundNumber?: number;
     matchIndex?: number;

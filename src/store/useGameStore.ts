@@ -3,10 +3,12 @@ import { ActiveTab } from '../components/Header';
 import {
   ApiKeysConfig,
   BenchmarkMetrics,
+  GameMode,
   GameResult,
   ModelConfig,
   MoveRecord,
   NeuralLogEntry,
+  SpectatorVision,
   TimeControl,
   TournamentMatch,
   TournamentState,
@@ -36,6 +38,11 @@ export interface LiveGameState {
   blackModel: ModelConfig;
   timeControl: TimeControl;
   speedMode: SpeedMode;
+  gameMode: GameMode;
+  whiteModifiers: string[];
+  blackModifiers: string[];
+  portalSquares?: [string, string];
+  fogVision?: { w: string[]; b: string[] };
   fen: string;
   turn: 'w' | 'b';
   clocks: { w: number; b: number };
@@ -56,6 +63,12 @@ interface GameStoreState {
   apiKeys: ApiKeysConfig;
   metrics: Record<string, BenchmarkMetrics>;
   customModels: ModelConfig[];
+
+  // Mode & Spectator Settings
+  gameMode: GameMode;
+  spectatorVision: SpectatorVision;
+  whiteModifiers: string[];
+  blackModifiers: string[];
 
   // Live Game State
   liveGame: LiveGameState;
@@ -78,6 +91,11 @@ interface GameStoreState {
   setMetrics: (metrics: Record<string, BenchmarkMetrics>) => void;
   setCustomModels: (models: ModelConfig[]) => void;
 
+  setGameMode: (gameMode: GameMode) => void;
+  setSpectatorVision: (vision: SpectatorVision) => void;
+  setWhiteModifiers: (modifiers: string[]) => void;
+  setBlackModifiers: (modifiers: string[]) => void;
+
   setLiveGame: (partial: Partial<LiveGameState>) => void;
   updateOnMove: (payload: {
     moveRecord?: MoveRecord;
@@ -86,6 +104,7 @@ interface GameStoreState {
     captures: { w: string[]; b: string[] };
     turn: 'w' | 'b';
     inCheck: boolean;
+    fogVision?: { w: string[]; b: string[] };
   }) => void;
   updateClock: (clocks: { w: number; b: number }) => void;
   updateThought: (thinking: { side: 'w' | 'b' | null; modelName: string; thoughtText?: string }) => void;
@@ -129,6 +148,11 @@ export const useGameStore = create<GameStoreState>((set) => ({
   metrics: storageService.getBenchmarkMetrics(),
   customModels: storageService.getCustomModels(),
 
+  gameMode: 'standard',
+  spectatorVision: 'all',
+  whiteModifiers: ['portal_squares', 'bounty_hunter', 'exploding_rooks'],
+  blackModifiers: ['ghost_knights', 'pawn_blitz', 'vampire_queen'],
+
   liveGame: {
     matchId: '',
     tournamentId: null,
@@ -136,6 +160,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
     blackModel: defaultBlackModel,
     timeControl: { name: 'Blitz 3+2', baseSeconds: 180, incrementSeconds: 2 },
     speedMode: '0.5s',
+    gameMode: 'standard',
+    whiteModifiers: ['portal_squares', 'bounty_hunter', 'exploding_rooks'],
+    blackModifiers: ['ghost_knights', 'pawn_blitz', 'vampire_queen'],
+    portalSquares: ['d4', 'e5'],
     fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     turn: 'w',
     clocks: { w: 180000, b: 180000 },
@@ -160,6 +188,23 @@ export const useGameStore = create<GameStoreState>((set) => ({
   setMetrics: (metrics) => set({ metrics }),
   setCustomModels: (customModels) => set({ customModels }),
 
+  setGameMode: (gameMode) =>
+    set((state) => ({
+      gameMode,
+      liveGame: { ...state.liveGame, gameMode },
+    })),
+  setSpectatorVision: (spectatorVision) => set({ spectatorVision }),
+  setWhiteModifiers: (whiteModifiers) =>
+    set((state) => ({
+      whiteModifiers,
+      liveGame: { ...state.liveGame, whiteModifiers },
+    })),
+  setBlackModifiers: (blackModifiers) =>
+    set((state) => ({
+      blackModifiers,
+      liveGame: { ...state.liveGame, blackModifiers },
+    })),
+
   setLiveGame: (partial) =>
     set((state) => ({
       liveGame: { ...state.liveGame, ...partial },
@@ -177,6 +222,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
         captures: payload.captures,
         turn: payload.turn,
         inCheck: payload.inCheck,
+        fogVision: payload.fogVision || state.liveGame.fogVision,
       },
     })),
 

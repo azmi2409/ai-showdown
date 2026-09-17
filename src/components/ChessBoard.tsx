@@ -1,12 +1,16 @@
 import React from 'react';
 import { Chess, Square } from 'chess.js';
-import { MoveRecord } from '../types';
+import { GameMode, MoveRecord, SpectatorVision } from '../types';
 
 interface ChessBoardProps {
   chess: Chess;
   lastMove?: MoveRecord;
   inCheck: boolean;
   turn: 'w' | 'b';
+  gameMode?: GameMode;
+  portalSquares?: [string, string];
+  fogVision?: { w: string[]; b: string[] };
+  spectatorVision?: SpectatorVision;
 }
 
 const PIECE_UNICODE: Record<string, string> = {
@@ -34,6 +38,10 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   lastMove,
   inCheck,
   turn,
+  gameMode = 'standard',
+  portalSquares = ['d4', 'e5'],
+  fogVision = { w: [], b: [] },
+  spectatorVision = 'all',
 }) => {
   const board = chess.board();
 
@@ -51,6 +59,9 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     }
   }
 
+  const whiteVisionSet = new Set(fogVision.w);
+  const blackVisionSet = new Set(fogVision.b);
+
   return (
     <div className="chess-board-wrapper">
       <div className="chess-board-grid">
@@ -64,13 +75,40 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
               lastMove && (lastMove.from === squareName || lastMove.to === squareName);
 
             const isCheckSquare = inCheck && checkKingSquare === squareName;
+            const isPortal = gameMode === 'mutators' && portalSquares.includes(squareName);
+
+            // Fog of war determination
+            const isFogMode = gameMode === 'fog_of_war';
+            let isShrouded = false;
+            let showPiece = !!piece;
+
+            if (isFogMode) {
+              if (spectatorVision === 'w') {
+                isShrouded = !whiteVisionSet.has(squareName);
+                if (isShrouded && piece && piece.color !== 'w') {
+                  showPiece = false;
+                }
+              } else if (spectatorVision === 'b') {
+                isShrouded = !blackVisionSet.has(squareName);
+                if (isShrouded && piece && piece.color !== 'b') {
+                  showPiece = false;
+                }
+              } else {
+                // Omniscient: subtle fog marker on squares outside active turn radar
+                const activeVision = turn === 'w' ? whiteVisionSet : blackVisionSet;
+                isShrouded = !activeVision.has(squareName);
+                showPiece = true; // Spectator always sees piece in omniscient mode
+              }
+            }
 
             return (
               <div
                 key={squareName}
                 className={`chess-square ${isLight ? 'light' : 'dark'} ${
                   isLastMoveSquare ? 'last-move' : ''
-                } ${isCheckSquare ? 'in-check' : ''}`}
+                } ${isCheckSquare ? 'in-check' : ''} ${isPortal ? 'portal-tile' : ''} ${
+                  isFogMode && isShrouded ? 'fog-tile' : ''
+                }`}
                 title={squareName}
               >
                 {/* File coordinate (only bottom rank) */}
@@ -79,8 +117,22 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 {/* Rank coordinate (only left file) */}
                 {file === 'a' && <span className="coord-label coord-rank">{rank}</span>}
 
+                {/* Portal Rune Badge */}
+                {isPortal && (
+                  <span className="portal-indicator" title="Quantum Portal Teleport">
+                    🌀
+                  </span>
+                )}
+
+                {/* Fog Mist Overlay */}
+                {isFogMode && isShrouded && (
+                  <div className="fog-overlay" title="Veiled in Fog of War">
+                    {!showPiece && <span className="fog-question">?</span>}
+                  </div>
+                )}
+
                 {/* Piece Rendering */}
-                {piece && (
+                {showPiece && piece && (
                   <span className={`chess-piece ${piece.color === 'w' ? 'white' : 'black'}`}>
                     {PIECE_UNICODE[`${piece.color}_${piece.type}`]}
                   </span>

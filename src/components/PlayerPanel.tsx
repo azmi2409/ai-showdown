@@ -1,5 +1,5 @@
 import React from 'react';
-import { ModelConfig } from '../types';
+import { ModelConfig, AVAILABLE_MODIFIERS } from '../types';
 
 interface PlayerPanelProps {
   model: ModelConfig;
@@ -10,6 +10,7 @@ interface PlayerPanelProps {
   materialDelta: number; // positive = this player leads
   isThinking?: boolean;
   thoughtText?: string;
+  modifiers?: string[];
 }
 
 const PIECE_SYMBOLS: Record<string, string> = {
@@ -29,6 +30,7 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
   materialDelta,
   isThinking,
   thoughtText,
+  modifiers,
 }) => {
   // Format clock: MM:SS.s or SS.ss if under 10 seconds
   const totalSeconds = Math.max(0, timeRemainingMs / 1000);
@@ -71,6 +73,22 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
             </span>
           </div>
           <div className="player-style">{model.playStyle}</div>
+
+          {/* Drafted Mutator Badges */}
+          {modifiers && modifiers.length > 0 && (
+            <div className="modifier-badge-list">
+              {modifiers.map((modId) => {
+                const mod = AVAILABLE_MODIFIERS.find((m) => m.id === modId);
+                if (!mod) return null;
+                return (
+                  <span key={modId} className="modifier-chip" title={mod.description}>
+                    <span>{mod.icon}</span>
+                    <span>{mod.name}</span>
+                  </span>
+                );
+              })}
+            </div>
+          )}
 
           {/* Live Thinking Status & Thought Bubble */}
           {isThinking && (

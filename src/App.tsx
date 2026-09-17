@@ -41,6 +41,10 @@ export const App: React.FC = () => {
   const metrics = useGameStore((s) => s.metrics);
   const customModels = useGameStore((s) => s.customModels);
   const audioEnabled = useGameStore((s) => s.audioEnabled);
+  const gameMode = useGameStore((s) => s.gameMode);
+  const spectatorVision = useGameStore((s) => s.spectatorVision);
+  const whiteModifiers = useGameStore((s) => s.whiteModifiers);
+  const blackModifiers = useGameStore((s) => s.blackModifiers);
 
   const setTournament = useGameStore((s) => s.setTournament);
   const setIsAutoRunningTournament = useGameStore((s) => s.setIsAutoRunningTournament);
@@ -51,6 +55,8 @@ export const App: React.FC = () => {
   const setApiKeys = useGameStore((s) => s.setApiKeys);
   const setMetrics = useGameStore((s) => s.setMetrics);
   const setCustomModels = useGameStore((s) => s.setCustomModels);
+  const setGameMode = useGameStore((s) => s.setGameMode);
+  const setSpectatorVision = useGameStore((s) => s.setSpectatorVision);
 
   // Retrieve persisted selections & saved game state
   const initialSelections = useMemo(() => storageService.getArenaSelections(), []);
@@ -301,6 +307,9 @@ export const App: React.FC = () => {
       blackModel,
       timeControl,
       speedMode,
+      gameMode,
+      whiteModifiers,
+      blackModifiers,
       tournamentId: tournament?.id || null,
     });
   };
@@ -468,6 +477,10 @@ export const App: React.FC = () => {
               blackModel={liveGame.status === 'idle' ? blackModel : liveGame.blackModel || blackModel}
               timeControl={timeControl}
               speedMode={speedMode}
+              gameMode={liveGame.gameMode || gameMode}
+              spectatorVision={spectatorVision}
+              whiteModifiers={liveGame.whiteModifiers || whiteModifiers}
+              blackModifiers={liveGame.blackModifiers || blackModifiers}
               audioEnabled={audioEnabled}
               gameStatus={liveGame.status}
               onSelectWhite={(m) => {
@@ -483,6 +496,8 @@ export const App: React.FC = () => {
                 gameClient.resetGame(tc);
               }}
               onSetSpeedMode={setSpeedMode}
+              onSetGameMode={setGameMode}
+              onSetSpectatorVision={setSpectatorVision}
               onToggleAudio={handleToggleAudio}
               onStartGame={handleStartGame}
               onPauseGame={handlePauseGame}
@@ -507,6 +522,7 @@ export const App: React.FC = () => {
               materialDelta={-material.delta}
               isThinking={activeThinking.side === 'b'}
               thoughtText={latestBlackThought}
+              modifiers={liveGame.gameMode === 'mutators' ? liveGame.blackModifiers || blackModifiers : undefined}
             />
 
             {/* Chess Board */}
@@ -515,6 +531,10 @@ export const App: React.FC = () => {
               lastMove={lastMove}
               inCheck={liveGame.inCheck}
               turn={liveGame.turn}
+              gameMode={liveGame.gameMode || gameMode}
+              portalSquares={liveGame.portalSquares}
+              fogVision={liveGame.fogVision}
+              spectatorVision={spectatorVision}
             />
 
             {/* White Player Panel (Bottom) */}
@@ -527,6 +547,7 @@ export const App: React.FC = () => {
               materialDelta={material.delta}
               isThinking={activeThinking.side === 'w'}
               thoughtText={latestWhiteThought}
+              modifiers={liveGame.gameMode === 'mutators' ? liveGame.whiteModifiers || whiteModifiers : undefined}
             />
 
             {/* Game Result Banner */}
