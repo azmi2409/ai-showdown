@@ -22,6 +22,7 @@ import { useGameStore } from './store/useGameStore';
 import {
   ApiKeysConfig,
   BenchmarkMetrics,
+  GameMode,
   GameResult,
   ModelConfig,
   TimeControl,
@@ -57,6 +58,8 @@ export const App: React.FC = () => {
   const setCustomModels = useGameStore((s) => s.setCustomModels);
   const setGameMode = useGameStore((s) => s.setGameMode);
   const setSpectatorVision = useGameStore((s) => s.setSpectatorVision);
+  const setWhiteModifiers = useGameStore((s) => s.setWhiteModifiers);
+  const setBlackModifiers = useGameStore((s) => s.setBlackModifiers);
 
   // Retrieve persisted selections & saved game state
   const initialSelections = useMemo(() => storageService.getArenaSelections(), []);
@@ -185,6 +188,7 @@ export const App: React.FC = () => {
 
       setActiveTab('arena');
 
+      const tourneyMode = tournamentRef.current?.gameMode || 'standard';
       const tourneyMatchId = `match_${Date.now()}_r${roundIndex + 1}_m${matchIndex + 1}`;
       gameClient.startGame({
         matchId: tourneyMatchId,
@@ -192,6 +196,9 @@ export const App: React.FC = () => {
         blackModel: match.black,
         timeControl: matchTc,
         speedMode,
+        gameMode: tourneyMode,
+        whiteModifiers: useGameStore.getState().whiteModifiers,
+        blackModifiers: useGameStore.getState().blackModifiers,
         tournamentId: tournamentRef.current?.id || null,
         roundNumber: roundIndex + 1,
         matchIndex,
@@ -222,6 +229,7 @@ export const App: React.FC = () => {
         roundName,
         totalMatchesInRound: totalInRound,
         tournamentTitle: tourneyTitle,
+        gameMode: currentTourney?.gameMode || 'standard',
         white: match.white,
         black: match.black,
       });
@@ -373,9 +381,10 @@ export const App: React.FC = () => {
     type: TournamentType,
     models: ModelConfig[],
     tc: TimeControl,
-    randomizeSeeding: boolean = true
+    randomizeSeeding: boolean = true,
+    mode: GameMode = 'standard'
   ) => {
-    const newTourney = TournamentManager.createTournament(title, type, models, tc, randomizeSeeding);
+    const newTourney = TournamentManager.createTournament(title, type, models, tc, randomizeSeeding, mode);
     setTournament(newTourney);
     storageService.saveTournament(newTourney);
   };
@@ -498,6 +507,8 @@ export const App: React.FC = () => {
               onSetSpeedMode={setSpeedMode}
               onSetGameMode={setGameMode}
               onSetSpectatorVision={setSpectatorVision}
+              onSetWhiteModifiers={setWhiteModifiers}
+              onSetBlackModifiers={setBlackModifiers}
               onToggleAudio={handleToggleAudio}
               onStartGame={handleStartGame}
               onPauseGame={handlePauseGame}
@@ -650,6 +661,7 @@ export const App: React.FC = () => {
           matchIndex={introMatch.matchIndex}
           totalMatchesInRound={introMatch.totalMatchesInRound}
           tournamentTitle={introMatch.tournamentTitle}
+          gameMode={introMatch.gameMode}
           whiteModel={introMatch.white}
           blackModel={introMatch.black}
           onStartMatch={() => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Swords, Zap, Play, Pause, Trophy } from 'lucide-react';
-import { ModelConfig } from '../types';
+import { Swords, Zap, Play, Pause, Trophy, Sparkles, CloudFog } from 'lucide-react';
+import { ModelConfig, GameMode } from '../types';
 import { audioService } from '../services/audioService';
 
 export interface TournamentIntroOverlayProps {
@@ -9,6 +9,7 @@ export interface TournamentIntroOverlayProps {
   matchIndex: number;
   totalMatchesInRound?: number;
   tournamentTitle: string;
+  gameMode?: GameMode;
   whiteModel: ModelConfig;
   blackModel: ModelConfig;
   onStartMatch: () => void;
@@ -21,6 +22,7 @@ export const TournamentIntroOverlay: React.FC<TournamentIntroOverlayProps> = ({
   matchIndex,
   totalMatchesInRound,
   tournamentTitle,
+  gameMode,
   whiteModel,
   blackModel,
   onStartMatch,
@@ -68,6 +70,24 @@ export const TournamentIntroOverlay: React.FC<TournamentIntroOverlayProps> = ({
           <div className="intro-badge">
             <Trophy size={14} color="#f59e0b" />
             <span>{tournamentTitle.toUpperCase()}</span>
+            {gameMode === 'mutators' && (
+              <>
+                <span>•</span>
+                <span style={{ color: '#06b6d4', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <Sparkles size={11} />
+                  <span>CHAOS DRAFT</span>
+                </span>
+              </>
+            )}
+            {gameMode === 'fog_of_war' && (
+              <>
+                <span>•</span>
+                <span style={{ color: '#06b6d4', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <CloudFog size={11} />
+                  <span>FOG OF WAR</span>
+                </span>
+              </>
+            )}
             <span>•</span>
             <span style={{ color: '#fbbf24', fontWeight: 800 }}>{stageLabel}</span>
             <span>•</span>

@@ -15,6 +15,7 @@ import {
   TournamentMatch,
   TournamentState,
   TournamentType,
+  GameMode,
 } from '../types';
 import { TournamentManager } from '../services/tournamentManager';
 
@@ -26,7 +27,8 @@ interface TournamentViewProps {
     type: TournamentType,
     selectedModels: ModelConfig[],
     timeControl: TimeControl,
-    randomizeSeeding?: boolean
+    randomizeSeeding?: boolean,
+    gameMode?: GameMode
   ) => void;
   onLaunchMatch: (match: TournamentMatch, roundIndex: number, matchIndex: number) => void;
   onAutoRunToggle: () => void;
@@ -51,6 +53,7 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
 }) => {
   // Wizard state if no active tournament
   const [selectedType, setSelectedType] = useState<TournamentType>('knockout');
+  const [selectedGameMode, setSelectedGameMode] = useState<GameMode>('standard');
   const [tournamentTitle, setTournamentTitle] = useState('2026 World AI Championship');
   const [randomizeSeeding, setRandomizeSeeding] = useState(true);
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>(
@@ -81,7 +84,7 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
 
   const handleCreate = () => {
     const chosenModels = allModels.filter((m) => selectedModelIds.includes(m.id));
-    onInitTournament(tournamentTitle, selectedType, chosenModels, DEFAULT_TIME_CONTROL, randomizeSeeding);
+    onInitTournament(tournamentTitle, selectedType, chosenModels, DEFAULT_TIME_CONTROL, randomizeSeeding, selectedGameMode);
   };
 
   // Trigger confetti when champion is crowned
@@ -117,6 +120,20 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
                 value={tournamentTitle}
                 onChange={(e) => setTournamentTitle(e.target.value)}
               />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Game Rules & Arena Mode</label>
+              <select
+                className="select-input"
+                value={selectedGameMode}
+                onChange={(e) => setSelectedGameMode(e.target.value as GameMode)}
+                style={{ borderColor: selectedGameMode !== 'standard' ? 'var(--neon-cyan)' : undefined }}
+              >
+                <option value="standard">Standard Classical Rules</option>
+                <option value="mutators">🎲 Chaos Draft (Mutators Auto-Battler)</option>
+                <option value="fog_of_war">🌫️ Fog of War (Kriegspiel Radar)</option>
+              </select>
             </div>
 
             <div className="form-group">
@@ -256,6 +273,10 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
           </h2>
           <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
             <span>Format: {tournament.type.toUpperCase()}</span>
+            <span>•</span>
+            <span style={{ color: '#fbbf24' }}>
+              Mode: {tournament.gameMode === 'mutators' ? '🎲 CHAOS DRAFT' : tournament.gameMode === 'fog_of_war' ? '🌫️ FOG OF WAR' : 'CLASSICAL'}
+            </span>
             <span>•</span>
             <span>Contestants: {tournament.models.length}</span>
             <span>•</span>

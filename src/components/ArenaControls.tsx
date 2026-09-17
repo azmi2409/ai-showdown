@@ -38,8 +38,8 @@ interface ArenaControlsProps {
   onSetSpeedMode: (mode: SpeedMode) => void;
   onSetGameMode: (mode: GameMode) => void;
   onSetSpectatorVision?: (vision: SpectatorVision) => void;
-  onToggleWhiteModifier?: (modId: string) => void;
-  onToggleBlackModifier?: (modId: string) => void;
+  onSetWhiteModifiers?: (mods: string[]) => void;
+  onSetBlackModifiers?: (mods: string[]) => void;
   onToggleAudio: () => void;
   onStartGame: () => void;
   onPauseGame: () => void;
@@ -77,8 +77,8 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
   onSetSpeedMode,
   onSetGameMode,
   onSetSpectatorVision,
-  onToggleWhiteModifier,
-  onToggleBlackModifier,
+  onSetWhiteModifiers,
+  onSetBlackModifiers,
   onToggleAudio,
   onStartGame,
   onPauseGame,
@@ -141,6 +141,132 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
           <option value="fog_of_war">🌫️ Fog of War (Kriegspiel Radar)</option>
         </select>
       </div>
+
+      {/* Draftable Mutator Modifiers Deck */}
+      {gameMode === 'mutators' && (
+        <div className="form-group" style={{ background: 'rgba(245, 158, 11, 0.06)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Sparkles size={12} />
+              <span>Draft Cards (Max 3 / Bot)</span>
+            </span>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ padding: '2px 6px', fontSize: '10px' }}
+              onClick={() => {
+                const shuffled = [...AVAILABLE_MODIFIERS].sort(() => Math.random() - 0.5);
+                const wMods = shuffled.slice(0, 3).map((m) => m.id);
+                const bMods = shuffled.slice(3, 6).map((m) => m.id);
+                if (onSetWhiteModifiers) onSetWhiteModifiers(wMods);
+                if (onSetBlackModifiers) onSetBlackModifiers(bMods);
+              }}
+              title="Randomize 3 wild draft cards for both bots"
+              disabled={!isIdle}
+            >
+              🎲 Auto Draft
+            </button>
+          </div>
+
+          {/* White Draft */}
+          <div style={{ marginBottom: '8px' }}>
+            <div style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 700, marginBottom: '4px' }}>
+              ⚪ WHITE'S CARDS ({whiteModifiers.length}/3):
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {AVAILABLE_MODIFIERS.map((mod) => {
+                const active = whiteModifiers.includes(mod.id);
+                return (
+                  <button
+                    key={mod.id}
+                    type="button"
+                    disabled={!isIdle}
+                    onClick={() => {
+                      if (!onSetWhiteModifiers) return;
+                      if (active) {
+                        if (whiteModifiers.length > 1) {
+                          onSetWhiteModifiers(whiteModifiers.filter((id) => id !== mod.id));
+                        }
+                      } else {
+                        if (whiteModifiers.length < 3) {
+                          onSetWhiteModifiers([...whiteModifiers, mod.id]);
+                        } else {
+                          onSetWhiteModifiers([...whiteModifiers.slice(1), mod.id]);
+                        }
+                      }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      padding: '2px 6px',
+                      fontSize: '10px',
+                      borderRadius: '4px',
+                      cursor: isIdle ? 'pointer' : 'default',
+                      background: active ? 'rgba(56, 189, 248, 0.25)' : 'rgba(0,0,0,0.3)',
+                      border: `1px solid ${active ? '#38bdf8' : 'rgba(255,255,255,0.08)'}`,
+                      color: active ? '#ffffff' : 'var(--text-muted)',
+                    }}
+                    title={mod.description}
+                  >
+                    <span>{mod.icon}</span>
+                    <span>{mod.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Black Draft */}
+          <div>
+            <div style={{ fontSize: '10px', color: '#c084fc', fontWeight: 700, marginBottom: '4px' }}>
+              ⚫ BLACK'S CARDS ({blackModifiers.length}/3):
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {AVAILABLE_MODIFIERS.map((mod) => {
+                const active = blackModifiers.includes(mod.id);
+                return (
+                  <button
+                    key={mod.id}
+                    type="button"
+                    disabled={!isIdle}
+                    onClick={() => {
+                      if (!onSetBlackModifiers) return;
+                      if (active) {
+                        if (blackModifiers.length > 1) {
+                          onSetBlackModifiers(blackModifiers.filter((id) => id !== mod.id));
+                        }
+                      } else {
+                        if (blackModifiers.length < 3) {
+                          onSetBlackModifiers([...blackModifiers, mod.id]);
+                        } else {
+                          onSetBlackModifiers([...blackModifiers.slice(1), mod.id]);
+                        }
+                      }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      padding: '2px 6px',
+                      fontSize: '10px',
+                      borderRadius: '4px',
+                      cursor: isIdle ? 'pointer' : 'default',
+                      background: active ? 'rgba(192, 132, 252, 0.25)' : 'rgba(0,0,0,0.3)',
+                      border: `1px solid ${active ? '#c084fc' : 'rgba(255,255,255,0.08)'}`,
+                      color: active ? '#ffffff' : 'var(--text-muted)',
+                    }}
+                    title={mod.description}
+                  >
+                    <span>{mod.icon}</span>
+                    <span>{mod.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Fog of War Spectator Vision Controls */}
       {gameMode === 'fog_of_war' && onSetSpectatorVision && (
