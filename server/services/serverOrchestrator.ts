@@ -602,10 +602,17 @@ export class ServerOrchestrator {
             if (this.status !== 'active' || this.isPaused || this.matchId !== loopMatchId) break;
 
             try {
-              // Prune old history to preserve focus and prevent context drift
-              if (this.agentMemory[turn].length > 16) {
-                const sys = this.agentMemory[turn][0];
-                this.agentMemory[turn] = [sys, ...this.agentMemory[turn].slice(-10)];
+              // Prune old history to preserve variant focus and prevent classical chess drift
+              if (this.gameMode !== 'standard') {
+                if (this.agentMemory[turn].length > 4) {
+                  const sys = this.agentMemory[turn][0];
+                  this.agentMemory[turn] = [sys, ...this.agentMemory[turn].slice(-2)];
+                }
+              } else {
+                if (this.agentMemory[turn].length > 12) {
+                  const sys = this.agentMemory[turn][0];
+                  this.agentMemory[turn] = [sys, ...this.agentMemory[turn].slice(-6)];
+                }
               }
 
               const memory = this.agentMemory[turn];
