@@ -234,6 +234,7 @@ export interface TournamentState {
   id: string;
   title: string;
   type: TournamentType;
+  gameMode?: GameMode;
   models: ModelConfig[];
   timeControl: TimeControl;
   rounds: TournamentRound[];

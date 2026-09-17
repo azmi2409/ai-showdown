@@ -1,4 +1,5 @@
 import {
+  GameMode,
   GameResult,
   ModelConfig,
   TimeControl,
@@ -34,7 +35,8 @@ export class TournamentManager {
     type: TournamentType,
     models: ModelConfig[],
     timeControl: TimeControl,
-    randomizeSeeding: boolean = true
+    randomizeSeeding: boolean = true,
+    gameMode: GameMode = 'standard'
   ): TournamentState {
     const standings: TournamentStanding[] = models.map((m) => ({
       modelId: m.id,
@@ -60,6 +62,7 @@ export class TournamentManager {
       id: `tourney_${Date.now()}`,
       title,
       type,
+      gameMode,
       models,
       timeControl,
       rounds,

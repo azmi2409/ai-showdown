@@ -25,6 +25,7 @@ export interface PendingMatchIntro {
   roundName: string;
   totalMatchesInRound?: number;
   tournamentTitle: string;
+  gameMode?: GameMode;
   white: ModelConfig;
   black: ModelConfig;
 }
