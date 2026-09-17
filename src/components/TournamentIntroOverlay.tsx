@@ -88,6 +88,38 @@ export const TournamentIntroOverlay: React.FC<TournamentIntroOverlayProps> = ({
                 </span>
               </>
             )}
+            {gameMode === 'duck_chess' && (
+              <>
+                <span>•</span>
+                <span style={{ color: '#eab308', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <span>🦆 DUCK CHESS</span>
+                </span>
+              </>
+            )}
+            {gameMode === 'crazyhouse' && (
+              <>
+                <span>•</span>
+                <span style={{ color: '#a855f7', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <span>📦 CRAZYHOUSE</span>
+                </span>
+              </>
+            )}
+            {gameMode === 'atomic_chess' && (
+              <>
+                <span>•</span>
+                <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <span>💥 ATOMIC CHESS</span>
+                </span>
+              </>
+            )}
+            {gameMode === 'spell_draft' && (
+              <>
+                <span>•</span>
+                <span style={{ color: '#ec4899', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <span>✨ SPELL DRAFT</span>
+                </span>
+              </>
+            )}
             <span>•</span>
             <span style={{ color: '#fbbf24', fontWeight: 800 }}>{stageLabel}</span>
             <span>•</span>

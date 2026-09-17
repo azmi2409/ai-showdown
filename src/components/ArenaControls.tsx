@@ -12,7 +12,7 @@ import {
   Sparkles,
   CloudFog,
 } from 'lucide-react';
-import { ModelConfig, TimeControl, GameMode, SpectatorVision, AVAILABLE_MODIFIERS } from '../types';
+import { ModelConfig, TimeControl, GameMode, SpectatorVision, AVAILABLE_MODIFIERS, AVAILABLE_SPELLS } from '../types';
 import { SpeedMode } from '../services/GameOrchestrator';
 import { AlgorithmEngine } from '../services/algorithmEngine';
 
@@ -30,6 +30,8 @@ interface ArenaControlsProps {
   spectatorVision?: SpectatorVision;
   whiteModifiers?: string[];
   blackModifiers?: string[];
+  whiteSpells?: string[];
+  blackSpells?: string[];
   audioEnabled: boolean;
   gameStatus: 'idle' | 'active' | 'paused' | 'stepping' | 'finished';
   onSelectWhite: (model: ModelConfig) => void;
@@ -40,6 +42,8 @@ interface ArenaControlsProps {
   onSetSpectatorVision?: (vision: SpectatorVision) => void;
   onSetWhiteModifiers?: (mods: string[]) => void;
   onSetBlackModifiers?: (mods: string[]) => void;
+  onSetWhiteSpells?: (spells: string[]) => void;
+  onSetBlackSpells?: (spells: string[]) => void;
   onToggleAudio: () => void;
   onStartGame: () => void;
   onPauseGame: () => void;
@@ -69,6 +73,8 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
   spectatorVision = 'all',
   whiteModifiers = [],
   blackModifiers = [],
+  whiteSpells = [],
+  blackSpells = [],
   audioEnabled,
   gameStatus,
   onSelectWhite,
@@ -79,6 +85,8 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
   onSetSpectatorVision,
   onSetWhiteModifiers,
   onSetBlackModifiers,
+  onSetWhiteSpells,
+  onSetBlackSpells,
   onToggleAudio,
   onStartGame,
   onPauseGame,
@@ -132,13 +140,30 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
         <select
           className="select-input"
           value={gameMode}
-          onChange={(e) => onSetGameMode(e.target.value as GameMode)}
+          onChange={(e) => {
+            const nextMode = e.target.value as GameMode;
+            if (nextMode !== 'standard') {
+              const aiModels = models.filter((mod) => !isAlgo(mod));
+              if (isAlgo(whiteModel) && aiModels[0]) {
+                onSelectWhite(aiModels[0]);
+              }
+              if (isAlgo(blackModel)) {
+                const altAI = aiModels.find((mod) => mod.id !== (isAlgo(whiteModel) ? aiModels[0]?.id : whiteModel.id)) || aiModels[1] || aiModels[0];
+                if (altAI) onSelectBlack(altAI);
+              }
+            }
+            onSetGameMode(nextMode);
+          }}
           disabled={!isIdle}
           style={{ borderColor: gameMode !== 'standard' ? 'var(--neon-cyan)' : undefined }}
         >
           <option value="standard">Standard Classical Chess</option>
+          <option value="duck_chess">🦆 Duck Chess (Rubber Duck Blocker)</option>
+          <option value="crazyhouse">📦 Crazyhouse (Drop Captured Units)</option>
+          <option value="atomic_chess">💥 Atomic Chess (Nuclear Blasts)</option>
           <option value="mutators">🎲 Chaos Draft (Mutators Auto-Battler)</option>
           <option value="fog_of_war">🌫️ Fog of War (Kriegspiel Radar)</option>
+          <option value="spell_draft">✨ Spell Draft (Tactical Cards)</option>
         </select>
       </div>
 
@@ -268,6 +293,120 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
         </div>
       )}
 
+      {/* Draftable Spells Deck */}
+      {gameMode === 'spell_draft' && (
+        <div className="form-group" style={{ background: 'rgba(236, 72, 153, 0.06)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(236, 72, 153, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#f472b6', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Sparkles size={12} />
+              <span>Spell Cards (Max 2 / Bot)</span>
+            </span>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ padding: '2px 6px', fontSize: '10px' }}
+              onClick={() => {
+                const shuffled = [...AVAILABLE_SPELLS].sort(() => Math.random() - 0.5);
+                const wSpells = shuffled.slice(0, 2).map((s) => s.id);
+                const bSpells = shuffled.slice(2, 4).map((s) => s.id);
+                if (onSetWhiteSpells) onSetWhiteSpells(wSpells);
+                if (onSetBlackSpells) onSetBlackSpells(bSpells);
+              }}
+              title="Randomize 2 spells for each bot"
+              disabled={!isIdle}
+            >
+              🎲 Auto Draft
+            </button>
+          </div>
+
+          {/* White Spells */}
+          <div style={{ marginBottom: '8px' }}>
+            <div style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 700, marginBottom: '4px' }}>
+              ⚪ WHITE'S SPELLS ({whiteSpells.length}/2):
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {AVAILABLE_SPELLS.map((spell) => {
+                const active = whiteSpells.includes(spell.id);
+                return (
+                  <button
+                    key={spell.id}
+                    type="button"
+                    disabled={!isIdle}
+                    onClick={() => {
+                      if (!onSetWhiteSpells) return;
+                      if (active) {
+                        onSetWhiteSpells(whiteSpells.filter((id) => id !== spell.id));
+                      } else if (whiteSpells.length < 2) {
+                        onSetWhiteSpells([...whiteSpells, spell.id]);
+                      }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      padding: '2px 6px',
+                      fontSize: '10px',
+                      borderRadius: '4px',
+                      cursor: isIdle ? 'pointer' : 'default',
+                      background: active ? 'rgba(56, 189, 248, 0.25)' : 'rgba(0,0,0,0.3)',
+                      border: `1px solid ${active ? '#38bdf8' : 'rgba(255,255,255,0.08)'}`,
+                      color: active ? '#ffffff' : 'var(--text-muted)',
+                    }}
+                    title={spell.description}
+                  >
+                    <span>{spell.icon}</span>
+                    <span>{spell.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Black Spells */}
+          <div>
+            <div style={{ fontSize: '10px', color: '#c084fc', fontWeight: 700, marginBottom: '4px' }}>
+              ⚫ BLACK'S SPELLS ({blackSpells.length}/2):
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {AVAILABLE_SPELLS.map((spell) => {
+                const active = blackSpells.includes(spell.id);
+                return (
+                  <button
+                    key={spell.id}
+                    type="button"
+                    disabled={!isIdle}
+                    onClick={() => {
+                      if (!onSetBlackSpells) return;
+                      if (active) {
+                        onSetBlackSpells(blackSpells.filter((id) => id !== spell.id));
+                      } else if (blackSpells.length < 2) {
+                        onSetBlackSpells([...blackSpells, spell.id]);
+                      }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      padding: '2px 6px',
+                      fontSize: '10px',
+                      borderRadius: '4px',
+                      cursor: isIdle ? 'pointer' : 'default',
+                      background: active ? 'rgba(192, 132, 252, 0.25)' : 'rgba(0,0,0,0.3)',
+                      border: `1px solid ${active ? '#c084fc' : 'rgba(255,255,255,0.08)'}`,
+                      color: active ? '#ffffff' : 'var(--text-muted)',
+                    }}
+                    title={spell.description}
+                  >
+                    <span>{spell.icon}</span>
+                    <span>{spell.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Fog of War Spectator Vision Controls */}
       {gameMode === 'fog_of_war' && onSetSpectatorVision && (
         <div className="form-group" style={{ background: 'rgba(15, 23, 42, 0.5)', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
@@ -324,10 +463,11 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
           disabled={!isIdle}
         >
           {models.map((m) => {
-            const blocked = isAlgo(m) && isAlgo(blackModel);
+            const isCustom = gameMode !== 'standard';
+            const blocked = isCustom ? isAlgo(m) : (isAlgo(m) && isAlgo(blackModel));
             return (
               <option key={m.id} value={m.id} disabled={blocked}>
-                {m.name} {blocked ? '(Algo vs Algo not allowed)' : m.isSimulated ? '(Simulated)' : `[${m.provider}]`}
+                {m.name} {isCustom && isAlgo(m) ? '(Classical Only)' : blocked ? '(Algo vs Algo not allowed)' : m.isSimulated ? '(Simulated)' : `[${m.provider}]`}
               </option>
             );
           })}
@@ -352,10 +492,11 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
           disabled={!isIdle}
         >
           {models.map((m) => {
-            const blocked = isAlgo(m) && isAlgo(whiteModel);
+            const isCustom = gameMode !== 'standard';
+            const blocked = isCustom ? isAlgo(m) : (isAlgo(m) && isAlgo(whiteModel));
             return (
               <option key={m.id} value={m.id} disabled={blocked}>
-                {m.name} {blocked ? '(Algo vs Algo not allowed)' : m.isSimulated ? '(Simulated)' : `[${m.provider}]`}
+                {m.name} {isCustom && isAlgo(m) ? '(Classical Only)' : blocked ? '(Algo vs Algo not allowed)' : m.isSimulated ? '(Simulated)' : `[${m.provider}]`}
               </option>
             );
           })}
@@ -415,6 +556,8 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
             className="btn btn-primary"
             style={{ gridColumn: 'span 2' }}
             onClick={onStartGame}
+            disabled={gameMode !== 'standard' && (isAlgo(whiteModel) || isAlgo(blackModel))}
+            title={gameMode !== 'standard' && (isAlgo(whiteModel) || isAlgo(blackModel)) ? 'Custom game modes require LLM agents. Non-LLM algorithm bots only play classical chess.' : undefined}
           >
             <Play size={16} />
             <span>Start Duel</span>

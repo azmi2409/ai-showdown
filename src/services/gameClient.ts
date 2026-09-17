@@ -104,6 +104,11 @@ class GameClient {
           captures,
           turn,
           inCheck,
+          duckSquare: payload.duckSquare !== undefined ? payload.duckSquare : this.state.duckSquare,
+          crazyhouseReserves: payload.crazyhouseReserves || this.state.crazyhouseReserves,
+          fogVision: payload.fogVision || this.state.fogVision,
+          whiteSpells: payload.whiteSpells || this.state.whiteSpells,
+          blackSpells: payload.blackSpells || this.state.blackSpells,
         };
 
         useGameStore.getState().updateOnMove({
@@ -113,6 +118,11 @@ class GameClient {
           captures,
           turn,
           inCheck,
+          duckSquare: payload.duckSquare,
+          crazyhouseReserves: payload.crazyhouseReserves,
+          fogVision: payload.fogVision,
+          whiteSpells: payload.whiteSpells,
+          blackSpells: payload.blackSpells,
         });
 
         // Sound effects based on move events
@@ -205,6 +215,8 @@ class GameClient {
     gameMode?: GameMode;
     whiteModifiers?: string[];
     blackModifiers?: string[];
+    whiteSpells?: string[];
+    blackSpells?: string[];
     tournamentId?: string | null;
     roundNumber?: number;
     matchIndex?: number;

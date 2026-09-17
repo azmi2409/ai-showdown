@@ -64,6 +64,10 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
     const target = allModels.find((m) => m.id === id);
     if (!target) return;
 
+    if (selectedGameMode !== 'standard' && TournamentManager.isAlgo(target)) {
+      return;
+    }
+
     if (selectedModelIds.includes(id)) {
       if (selectedModelIds.length > 2) {
         setSelectedModelIds(selectedModelIds.filter((mId) => mId !== id));
@@ -127,12 +131,27 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
               <select
                 className="select-input"
                 value={selectedGameMode}
-                onChange={(e) => setSelectedGameMode(e.target.value as GameMode)}
+                onChange={(e) => {
+                  const nextMode = e.target.value as GameMode;
+                  setSelectedGameMode(nextMode);
+                  if (nextMode !== 'standard') {
+                    setSelectedModelIds((prev) =>
+                      prev.filter((mId) => {
+                        const m = allModels.find((mod) => mod.id === mId);
+                        return !TournamentManager.isAlgo(m);
+                      })
+                    );
+                  }
+                }}
                 style={{ borderColor: selectedGameMode !== 'standard' ? 'var(--neon-cyan)' : undefined }}
               >
                 <option value="standard">Standard Classical Rules</option>
+                <option value="duck_chess">🦆 Duck Chess (Rubber Duck Blocker)</option>
+                <option value="crazyhouse">📦 Crazyhouse (Drop Captured Units)</option>
+                <option value="atomic_chess">💥 Atomic Chess (Nuclear Blasts)</option>
                 <option value="mutators">🎲 Chaos Draft (Mutators Auto-Battler)</option>
                 <option value="fog_of_war">🌫️ Fog of War (Kriegspiel Radar)</option>
+                <option value="spell_draft">✨ Spell Draft (Tactical Cards)</option>
               </select>
             </div>
 
@@ -173,11 +192,14 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
                 }}
               >
                 {allModels.map((model) => {
+                  const isAlgoModel = TournamentManager.isAlgo(model);
+                  const isCustom = selectedGameMode !== 'standard';
+                  const disabled = isCustom && isAlgoModel;
                   const isChecked = selectedModelIds.includes(model.id);
                   return (
                     <div
                       key={model.id}
-                      onClick={() => toggleModelSelection(model.id)}
+                      onClick={() => !disabled && toggleModelSelection(model.id)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -186,14 +208,16 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
                         background: isChecked ? 'rgba(124, 58, 237, 0.2)' : 'rgba(0,0,0,0.3)',
                         border: `1px solid ${isChecked ? 'var(--neon-violet)' : 'var(--border-subtle)'}`,
                         borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer',
+                        cursor: disabled ? 'not-allowed' : 'pointer',
+                        opacity: disabled ? 0.4 : 1,
                         transition: 'all 0.15s',
                       }}
+                      title={disabled ? 'Non-LLM algorithm bots only support Classical rules' : undefined}
                     >
                       <span style={{ fontSize: '20px' }}>{model.avatar}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {model.name}
+                          {model.name} {disabled && <span style={{ fontSize: '10px', color: '#f59e0b' }}>(Classical only)</span>}
                         </div>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                           Elo {model.simulatedElo || 1500}
@@ -202,6 +226,7 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
                       <input
                         type="checkbox"
                         checked={isChecked}
+                        disabled={disabled}
                         onChange={() => {}}
                         style={{ accentColor: 'var(--neon-violet)' }}
                       />
@@ -275,7 +300,15 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
             <span>Format: {tournament.type.toUpperCase()}</span>
             <span>•</span>
             <span style={{ color: '#fbbf24' }}>
-              Mode: {tournament.gameMode === 'mutators' ? '🎲 CHAOS DRAFT' : tournament.gameMode === 'fog_of_war' ? '🌫️ FOG OF WAR' : 'CLASSICAL'}
+              Mode: {
+                tournament.gameMode === 'mutators' ? '🎲 CHAOS DRAFT' :
+                tournament.gameMode === 'fog_of_war' ? '🌫️ FOG OF WAR' :
+                tournament.gameMode === 'duck_chess' ? '🦆 DUCK CHESS' :
+                tournament.gameMode === 'crazyhouse' ? '📦 CRAZYHOUSE' :
+                tournament.gameMode === 'atomic_chess' ? '💥 ATOMIC CHESS' :
+                tournament.gameMode === 'spell_draft' ? '✨ SPELL DRAFT' :
+                'CLASSICAL'
+              }
             </span>
             <span>•</span>
             <span>Contestants: {tournament.models.length}</span>

@@ -11,6 +11,8 @@ interface ChessBoardProps {
   portalSquares?: [string, string];
   fogVision?: { w: string[]; b: string[] };
   spectatorVision?: SpectatorVision;
+  duckSquare?: string | null;
+  crazyhouseReserves?: { w: string[]; b: string[] };
 }
 
 const PIECE_UNICODE: Record<string, string> = {
@@ -42,6 +44,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   portalSquares = ['d4', 'e5'],
   fogVision = { w: [], b: [] },
   spectatorVision = 'all',
+  duckSquare,
+  crazyhouseReserves = { w: [], b: [] },
 }) => {
   const board = chess.board();
 
@@ -64,6 +68,22 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
   return (
     <div className="chess-board-wrapper">
+      {/* Crazyhouse Reserve - Black */}
+      {gameMode === 'crazyhouse' && (
+        <div className="crazyhouse-reserve black-reserve" title="Black Reserves (Drops Available)">
+          <span className="reserve-label">Black Drops:</span>
+          {crazyhouseReserves.b.length === 0 ? (
+            <span className="reserve-empty">Empty</span>
+          ) : (
+            crazyhouseReserves.b.map((p, idx) => (
+              <span key={idx} className="reserve-piece black">
+                {PIECE_UNICODE[`b_${p.toLowerCase()}`] || p}
+              </span>
+            ))
+          )}
+        </div>
+      )}
+
       <div className="chess-board-grid">
         {RANKS.map((rank, rIdx) =>
           FILES.map((file, fIdx) => {
@@ -76,6 +96,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
             const isCheckSquare = inCheck && checkKingSquare === squareName;
             const isPortal = gameMode === 'mutators' && portalSquares.includes(squareName);
+            const isDuck = gameMode === 'duck_chess' && duckSquare === squareName;
 
             // Fog of war determination
             const isFogMode = gameMode === 'fog_of_war';
@@ -107,8 +128,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 className={`chess-square ${isLight ? 'light' : 'dark'} ${
                   isLastMoveSquare ? 'last-move' : ''
                 } ${isCheckSquare ? 'in-check' : ''} ${isPortal ? 'portal-tile' : ''} ${
-                  isFogMode && isShrouded ? 'fog-tile' : ''
-                }`}
+                  isDuck ? 'duck-tile' : ''
+                } ${isFogMode && isShrouded ? 'fog-tile' : ''}`}
                 title={squareName}
               >
                 {/* File coordinate (only bottom rank) */}
@@ -121,6 +142,13 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 {isPortal && (
                   <span className="portal-indicator" title="Quantum Portal Teleport">
                     🌀
+                  </span>
+                )}
+
+                {/* Duck Blocker */}
+                {isDuck && (
+                  <span className="duck-indicator" title="Neutral Duck Blocker">
+                    🦆
                   </span>
                 )}
 
@@ -142,6 +170,22 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
           })
         )}
       </div>
+
+      {/* Crazyhouse Reserve - White */}
+      {gameMode === 'crazyhouse' && (
+        <div className="crazyhouse-reserve white-reserve" title="White Reserves (Drops Available)">
+          <span className="reserve-label">White Drops:</span>
+          {crazyhouseReserves.w.length === 0 ? (
+            <span className="reserve-empty">Empty</span>
+          ) : (
+            crazyhouseReserves.w.map((p, idx) => (
+              <span key={idx} className="reserve-piece white">
+                {PIECE_UNICODE[`w_${p.toLowerCase()}`] || p}
+              </span>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 };

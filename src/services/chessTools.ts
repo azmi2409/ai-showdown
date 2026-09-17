@@ -13,7 +13,7 @@ export const CHESS_TOOLS: ToolDefinition[] = [
           move: {
             type: 'string',
             description:
-              'Legal chess move in Standard Algebraic Notation (SAN). Examples: "e4", "Nf3", "O-O", "Bxe5", "e8=Q"',
+              'Legal chess move in Standard Algebraic Notation (SAN). Examples: "e4", "Nf3", "O-O", "Bxe5", "e8=Q", or Crazyhouse drop like "P@e4", "N@f3"',
           },
           reasoning: {
             type: 'string',
@@ -45,6 +45,33 @@ export const CHESS_TOOLS: ToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {},
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'cast_spell',
+      description:
+        'Cast an active tactical spell card (swap_pawns, catapult_knight, frost_freeze, resurrection) before making a move. Available in Spell Draft mode.',
+      parameters: {
+        type: 'object',
+        properties: {
+          spell_id: {
+            type: 'string',
+            description:
+              'The ID of the spell to cast: "swap_pawns", "catapult_knight", "frost_freeze", or "resurrection".',
+          },
+          sq1: {
+            type: 'string',
+            description: 'Optional primary square argument (e.g. piece square or target square).',
+          },
+          sq2: {
+            type: 'string',
+            description: 'Optional secondary square argument (e.g. swap destination square).',
+          },
+        },
+        required: ['spell_id'],
       },
     },
   },

@@ -18,7 +18,7 @@ gameRouter.get('/state', (_req: Request, res: Response) => {
 // POST /api/game/start - Start or restart game
 gameRouter.post('/start', async (req: Request, res: Response) => {
   try {
-    const { whiteModel, blackModel } = req.body;
+    const { whiteModel, blackModel, gameMode } = req.body;
     const isAlgo = (m?: any) =>
       m && (m.provider === 'algorithm' || AlgorithmEngine.isAlgorithmModel(m.id) || AlgorithmEngine.isAlgorithmModel(m.modelIdentifier));
 
@@ -26,6 +26,13 @@ gameRouter.post('/start', async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         error: 'Algorithm vs Algorithm duels are not permitted. At least one participant must be an AI model.',
+      });
+    }
+
+    if (gameMode && gameMode !== 'standard' && (isAlgo(whiteModel) || isAlgo(blackModel))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Non-LLM algorithm bots cannot play custom game modes. Select LLM models for variant modes.',
       });
     }
 
