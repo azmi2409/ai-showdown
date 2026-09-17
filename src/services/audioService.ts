@@ -16,12 +16,33 @@ class AudioService {
     return this.ctx;
   }
 
+  private routeNode(osc: OscillatorNode, gain: GainNode, ctx: AudioContext): void {
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch {}
+    };
+  }
+
   public setEnabled(enabled: boolean): void {
     this.enabled = enabled;
+    if (!enabled && this.ctx && this.ctx.state === 'running') {
+      this.ctx.suspend();
+    }
   }
 
   public isEnabled(): boolean {
     return this.enabled;
+  }
+
+  public close(): void {
+    if (this.ctx) {
+      this.ctx.close();
+      this.ctx = null;
+    }
   }
 
   public playMove(): void {
@@ -39,8 +60,7 @@ class AudioService {
     gain.gain.setValueAtTime(0.3, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    this.routeNode(osc, gain, ctx);
 
     osc.start(now);
     osc.stop(now + 0.08);
@@ -60,8 +80,7 @@ class AudioService {
     osc1.frequency.exponentialRampToValueAtTime(150, now + 0.12);
     gain1.gain.setValueAtTime(0.4, now);
     gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
+    this.routeNode(osc1, gain1, ctx);
     osc1.start(now);
     osc1.stop(now + 0.12);
 
@@ -73,8 +92,7 @@ class AudioService {
     osc2.frequency.exponentialRampToValueAtTime(60, now + 0.14);
     gain2.gain.setValueAtTime(0.3, now);
     gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
+    this.routeNode(osc2, gain2, ctx);
     osc2.start(now);
     osc2.stop(now + 0.14);
   }
@@ -95,8 +113,7 @@ class AudioService {
       gain.gain.setValueAtTime(0.25, time);
       gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      this.routeNode(osc, gain, ctx);
 
       osc.start(time);
       osc.stop(time + 0.12);
@@ -120,8 +137,7 @@ class AudioService {
       gain.gain.setValueAtTime(0.2, time);
       gain.gain.exponentialRampToValueAtTime(0.001, time + 0.6);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      this.routeNode(osc, gain, ctx);
 
       osc.start(time);
       osc.stop(time + 0.6);
@@ -142,8 +158,7 @@ class AudioService {
     gain.gain.setValueAtTime(0.1, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    this.routeNode(osc, gain, ctx);
 
     osc.start(now);
     osc.stop(now + 0.03);

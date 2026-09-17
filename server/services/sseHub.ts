@@ -56,9 +56,13 @@ export class SSEHub {
       this.sendToClient(res, 'init', initialData);
     }
 
-    res.on('close', () => {
+    const cleanup = () => {
       this.clients.delete(res);
-    });
+    };
+
+    res.on('close', cleanup);
+    res.on('finish', cleanup);
+    res.on('error', cleanup);
   }
 
   public removeClient(res: Response): void {
@@ -70,15 +74,26 @@ export class SSEHub {
     const message = `event: ${type}\ndata: ${data}\n\n`;
 
     for (const client of this.clients) {
+      if (client.destroyed || client.writableEnded) {
+        this.clients.delete(client);
+        continue;
+      }
       try {
-        client.write(message);
-      } catch (err) {
+        const ok = client.write(message);
+        if (!ok && (client.destroyed || client.writableEnded)) {
+          this.clients.delete(client);
+        }
+      } catch {
         this.clients.delete(client);
       }
     }
   }
 
   private sendToClient(res: Response, type: SSEEventType, payload: any): void {
+    if (res.destroyed || res.writableEnded) {
+      this.clients.delete(res);
+      return;
+    }
     try {
       const data = JSON.stringify({ type, payload });
       res.write(`event: ${type}\ndata: ${data}\n\n`);

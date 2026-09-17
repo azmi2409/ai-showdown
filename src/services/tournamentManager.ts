@@ -10,11 +10,21 @@ import {
 } from '../types';
 
 export class TournamentManager {
+  private static shuffle<T>(array: T[]): T[] {
+    const copy = [...array];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
   public static createTournament(
     title: string,
     type: TournamentType,
     models: ModelConfig[],
-    timeControl: TimeControl
+    timeControl: TimeControl,
+    randomizeSeeding: boolean = true
   ): TournamentState {
     const standings: TournamentStanding[] = models.map((m) => ({
       modelId: m.id,
@@ -31,9 +41,9 @@ export class TournamentManager {
     let rounds: TournamentRound[] = [];
 
     if (type === 'knockout') {
-      rounds = this.generateKnockoutRounds(models);
+      rounds = this.generateKnockoutRounds(models, randomizeSeeding);
     } else {
-      rounds = this.generateRoundRobinRounds(models);
+      rounds = this.generateRoundRobinRounds(models, randomizeSeeding);
     }
 
     return {
@@ -51,7 +61,10 @@ export class TournamentManager {
     };
   }
 
-  private static generateKnockoutRounds(models: ModelConfig[]): TournamentRound[] {
+  private static generateKnockoutRounds(
+    models: ModelConfig[],
+    randomizeSeeding: boolean = true
+  ): TournamentRound[] {
     const numParticipants = models.length;
     // Next power of 2
     let bracketSize = 4;
@@ -59,8 +72,10 @@ export class TournamentManager {
       bracketSize *= 2;
     }
 
-    // Sort by Elo descending for seeding
-    const seeded = [...models].sort((a, b) => (b.simulatedElo || 1500) - (a.simulatedElo || 1500));
+    // Seeding: randomized draw or ranked Elo seeding
+    const seeded = randomizeSeeding
+      ? this.shuffle(models)
+      : [...models].sort((a, b) => (b.simulatedElo || 1500) - (a.simulatedElo || 1500));
 
     // Pad with byes if necessary
     const slots: (ModelConfig | null)[] = new Array(bracketSize).fill(null);
@@ -148,10 +163,13 @@ export class TournamentManager {
     return rounds;
   }
 
-  private static generateRoundRobinRounds(models: ModelConfig[]): TournamentRound[] {
+  private static generateRoundRobinRounds(
+    models: ModelConfig[],
+    randomizeSeeding: boolean = true
+  ): TournamentRound[] {
     const n = models.length;
     const rounds: TournamentRound[] = [];
-    const list = [...models];
+    const list = randomizeSeeding ? this.shuffle(models) : [...models];
 
     // If odd number, add a dummy bye
     if (n % 2 !== 0) {

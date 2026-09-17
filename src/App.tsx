@@ -10,6 +10,7 @@ import { TournamentView } from './components/TournamentView';
 import { MatchesView } from './components/MatchesView';
 import { LeaderboardView } from './components/LeaderboardView';
 import { SettingsView } from './components/SettingsView';
+import { TournamentIntroOverlay } from './components/TournamentIntroOverlay';
 import { gameClient, SpeedMode } from './services/gameClient';
 import { storageService } from './services/storageService';
 import { audioService } from './services/audioService';
@@ -82,11 +83,27 @@ export const App: React.FC = () => {
   const [tournament, setTournament] = useState<TournamentState | null>(() =>
     storageService.getSavedTournament()
   );
+  const tournamentRef = useRef(tournament);
+  tournamentRef.current = tournament;
+
   const [isAutoRunningTournament, setIsAutoRunningTournament] = useState(false);
+  const autoRunTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentTourneyMatchRef = useRef<{
     match: TournamentMatch;
     roundIndex: number;
     matchIndex: number;
+  } | null>(null);
+
+  // Tournament Intro Animation State
+  const [introMatch, setIntroMatch] = useState<{
+    match: TournamentMatch;
+    roundIndex: number;
+    matchIndex: number;
+    roundName: string;
+    totalMatchesInRound?: number;
+    tournamentTitle: string;
+    white: ModelConfig;
+    black: ModelConfig;
   } | null>(null);
 
   // Subscribe to backend SSE live game state
@@ -167,15 +184,15 @@ export const App: React.FC = () => {
     });
   }, []);
 
-  // Tournament launch helper
-  const launchTournamentMatch = useCallback(
+  // Tournament execution helper (triggers the match in arena)
+  const executeLaunchTournamentMatch = useCallback(
     (match: TournamentMatch, roundIndex: number, matchIndex: number) => {
       if (!match.white || !match.black) return;
 
       currentTourneyMatchRef.current = { match, roundIndex, matchIndex };
       setWhiteModel(match.white);
       setBlackModel(match.black);
-      const matchTc = tournament?.timeControl || timeControl;
+      const matchTc = tournamentRef.current?.timeControl || timeControl;
       setTimeControl(matchTc);
 
       setActiveTab('arena');
@@ -187,12 +204,41 @@ export const App: React.FC = () => {
         blackModel: match.black,
         timeControl: matchTc,
         speedMode,
-        tournamentId: tournament?.id || null,
+        tournamentId: tournamentRef.current?.id || null,
         roundNumber: roundIndex + 1,
         matchIndex,
       });
     },
-    [tournament, timeControl, speedMode]
+    [timeControl, speedMode]
+  );
+
+  // Tournament queue helper (displays VS intro animation before match start)
+  const queueTournamentMatch = useCallback(
+    (match: TournamentMatch, roundIndex: number, matchIndex: number) => {
+      if (!match.white || !match.black) return;
+
+      const currentTourney = tournamentRef.current;
+      const round = currentTourney?.rounds[roundIndex];
+      const roundName = round?.name || `Round ${roundIndex + 1}`;
+      const totalInRound = round?.matches.length;
+      const tourneyTitle = currentTourney?.title || 'Championship Tournament';
+
+      // Always auto-advance in tournament mode
+      setIsAutoRunningTournament(true);
+      setActiveTab('arena');
+
+      setIntroMatch({
+        match,
+        roundIndex,
+        matchIndex,
+        roundName,
+        totalMatchesInRound: totalInRound,
+        tournamentTitle: tourneyTitle,
+        white: match.white,
+        black: match.black,
+      });
+    },
+    []
   );
 
   // Handle Game Over (Update Tournament bracket & Refresh Leaderboard)
@@ -209,11 +255,12 @@ export const App: React.FC = () => {
         }
       });
 
-      // If playing a tournament match, update bracket and launch next match if auto-running
-      if (tournament && currentTourneyMatchRef.current) {
+      // If playing a tournament match, update bracket and launch next match automatically
+      const currentTourney = tournamentRef.current;
+      if (currentTourney && currentTourneyMatchRef.current) {
         const { roundIndex, matchIndex } = currentTourneyMatchRef.current;
         const updatedTourney = TournamentManager.recordMatchResult(
-          tournament,
+          currentTourney,
           roundIndex,
           matchIndex,
           result
@@ -223,19 +270,38 @@ export const App: React.FC = () => {
         apiService.saveTournament(updatedTourney);
         currentTourneyMatchRef.current = null;
 
-        if (isAutoRunningTournament && updatedTourney.status !== 'completed') {
+        if (updatedTourney.status === 'completed') {
+          setIsAutoRunningTournament(false);
+          // Auto switch to tournament view to see the champion podium after 2 seconds
           setTimeout(() => {
+            setActiveTab('tournament');
+          }, 2000);
+        } else if (isAutoRunningTournament) {
+          if (autoRunTimerRef.current) {
+            clearTimeout(autoRunTimerRef.current);
+          }
+          // Short 1.5s delay to view win/draw banner, then pop up VS intro for next duel
+          autoRunTimerRef.current = setTimeout(() => {
+            autoRunTimerRef.current = null;
             const nextMatch = TournamentManager.getNextPendingMatch(updatedTourney);
             if (nextMatch) {
-              launchTournamentMatch(nextMatch.match, nextMatch.roundIndex, nextMatch.matchIndex);
+              queueTournamentMatch(nextMatch.match, nextMatch.roundIndex, nextMatch.matchIndex);
             } else {
               setIsAutoRunningTournament(false);
             }
-          }, 2500);
+          }, 1500);
         }
       }
     });
-  }, [tournament, isAutoRunningTournament, timeControl, speedMode, launchTournamentMatch]);
+
+    return () => {
+      if (autoRunTimerRef.current) {
+        clearTimeout(autoRunTimerRef.current);
+        autoRunTimerRef.current = null;
+      }
+      gameClient.setGameOverCallback(() => {});
+    };
+  }, [isAutoRunningTournament, queueTournamentMatch]);
 
   // Arena Actions
   const handleStartGame = () => {
@@ -300,6 +366,7 @@ export const App: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     link.remove();
+    URL.revokeObjectURL(url);
   };
 
   // Tournament Actions
@@ -307,9 +374,10 @@ export const App: React.FC = () => {
     title: string,
     type: TournamentType,
     models: ModelConfig[],
-    tc: TimeControl
+    tc: TimeControl,
+    randomizeSeeding: boolean = true
   ) => {
-    const newTourney = TournamentManager.createTournament(title, type, models, tc);
+    const newTourney = TournamentManager.createTournament(title, type, models, tc, randomizeSeeding);
     setTournament(newTourney);
     storageService.saveTournament(newTourney);
   };
@@ -317,19 +385,29 @@ export const App: React.FC = () => {
 
   const handleAutoRunToggle = () => {
     if (isAutoRunningTournament) {
+      if (autoRunTimerRef.current) {
+        clearTimeout(autoRunTimerRef.current);
+        autoRunTimerRef.current = null;
+      }
       setIsAutoRunningTournament(false);
+      setIntroMatch(null);
     } else {
       setIsAutoRunningTournament(true);
       if (tournament && !currentTourneyMatchRef.current) {
         const next = TournamentManager.getNextPendingMatch(tournament);
         if (next) {
-          launchTournamentMatch(next.match, next.roundIndex, next.matchIndex);
+          queueTournamentMatch(next.match, next.roundIndex, next.matchIndex);
         }
       }
     }
   };
 
   const handleResetTournament = () => {
+    if (autoRunTimerRef.current) {
+      clearTimeout(autoRunTimerRef.current);
+      autoRunTimerRef.current = null;
+    }
+    setIntroMatch(null);
     setIsAutoRunningTournament(false);
     currentTourneyMatchRef.current = null;
     setTournament(null);
@@ -509,7 +587,7 @@ export const App: React.FC = () => {
           allModels={allModels}
           tournament={tournament}
           onInitTournament={handleInitTournament}
-          onLaunchMatch={launchTournamentMatch}
+          onLaunchMatch={queueTournamentMatch}
           onAutoRunToggle={handleAutoRunToggle}
           isAutoRunning={isAutoRunningTournament}
           onResetTournament={handleResetTournament}
@@ -551,6 +629,30 @@ export const App: React.FC = () => {
           onAddCustomModel={handleAddCustomModel}
           onDeleteCustomModel={handleDeleteCustomModel}
           onResetAllData={handleResetAllData}
+        />
+      )}
+
+      {/* Tournament Match Versus Intro Animation Overlay */}
+      {introMatch && (
+        <TournamentIntroOverlay
+          isOpen={true}
+          roundName={introMatch.roundName}
+          matchIndex={introMatch.matchIndex}
+          totalMatchesInRound={introMatch.totalMatchesInRound}
+          tournamentTitle={introMatch.tournamentTitle}
+          whiteModel={introMatch.white}
+          blackModel={introMatch.black}
+          onStartMatch={() => {
+            const m = introMatch;
+            setIntroMatch(null);
+            if (m) {
+              executeLaunchTournamentMatch(m.match, m.roundIndex, m.matchIndex);
+            }
+          }}
+          onCancel={() => {
+            setIntroMatch(null);
+            setIsAutoRunningTournament(false);
+          }}
         />
       )}
     </div>

@@ -7,6 +7,7 @@ import {
   Sparkles,
   Award,
   Layers,
+  Shuffle,
 } from 'lucide-react';
 import {
   ModelConfig,
@@ -24,7 +25,8 @@ interface TournamentViewProps {
     title: string,
     type: TournamentType,
     selectedModels: ModelConfig[],
-    timeControl: TimeControl
+    timeControl: TimeControl,
+    randomizeSeeding?: boolean
   ) => void;
   onLaunchMatch: (match: TournamentMatch, roundIndex: number, matchIndex: number) => void;
   onAutoRunToggle: () => void;
@@ -50,6 +52,7 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
   // Wizard state if no active tournament
   const [selectedType, setSelectedType] = useState<TournamentType>('knockout');
   const [tournamentTitle, setTournamentTitle] = useState('2026 World AI Championship');
+  const [randomizeSeeding, setRandomizeSeeding] = useState(true);
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>(
     allModels.slice(0, 4).map((m) => m.id)
   );
@@ -66,7 +69,7 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
 
   const handleCreate = () => {
     const chosenModels = allModels.filter((m) => selectedModelIds.includes(m.id));
-    onInitTournament(tournamentTitle, selectedType, chosenModels, DEFAULT_TIME_CONTROL);
+    onInitTournament(tournamentTitle, selectedType, chosenModels, DEFAULT_TIME_CONTROL, randomizeSeeding);
   };
 
   // Trigger confetti when champion is crowned
@@ -177,6 +180,40 @@ export const TournamentView: React.FC<TournamentViewProps> = ({
                   );
                 })}
               </div>
+            </div>
+
+            {/* Randomize Seeding Toggle */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                background: 'rgba(6, 182, 212, 0.08)',
+                border: '1px solid rgba(6, 182, 212, 0.3)',
+                borderRadius: 'var(--radius-sm)',
+                marginTop: '4px',
+                cursor: 'pointer',
+              }}
+              onClick={() => setRandomizeSeeding(!randomizeSeeding)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Shuffle size={16} color="var(--neon-cyan)" />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Randomize Seeding & Matchups
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Shuffle contestants randomly instead of fixed Elo rating seeding
+                  </div>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={randomizeSeeding}
+                onChange={(e) => setRandomizeSeeding(e.target.checked)}
+                style={{ accentColor: 'var(--neon-cyan)', width: '18px', height: '18px', cursor: 'pointer' }}
+              />
             </div>
 
             <button

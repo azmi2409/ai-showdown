@@ -14,7 +14,8 @@ export class OpenAIProvider implements AgentProvider {
     modelIdentifier: string,
     apiKey?: string,
     customBaseUrl?: string,
-    onStreamChunk?: (chunk: StreamChunk) => void
+    onStreamChunk?: (chunk: StreamChunk) => void,
+    signal?: AbortSignal
   ): Promise<AgentTurnResponse> {
     const startTime = performance.now();
     const baseUrl = customBaseUrl || this.defaultBaseUrl;
@@ -70,6 +71,7 @@ export class OpenAIProvider implements AgentProvider {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
+      signal,
     });
 
     if (!response.ok) {
@@ -87,76 +89,85 @@ export class OpenAIProvider implements AgentProvider {
       const decoder = new TextDecoder('utf-8');
       let buffer = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        while (true) {
+          if (signal?.aborted) {
+            await reader.cancel();
+            break;
+          }
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith('data:')) continue;
-          if (trimmed === 'data: [DONE]') continue;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
 
-          try {
-            const jsonStr = trimmed.replace(/^data:\s*/, '');
-            const parsed = JSON.parse(jsonStr);
-            const choice = parsed.choices?.[0];
-            const delta = choice?.delta;
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data:')) continue;
+            if (trimmed === 'data: [DONE]') continue;
 
-            if (delta) {
-              // 1. Thinking / Reasoning delta (support multiple provider formats)
-              const reasoningChunk =
-                delta.reasoning_content ||
-                delta.reasoning ||
-                delta.thought ||
-                delta.thinking ||
-                '';
-              if (reasoningChunk) {
-                accumulatedReasoning += reasoningChunk;
-                if (onStreamChunk) {
-                  onStreamChunk({ thinking: reasoningChunk, text: accumulatedReasoning });
-                }
-              }
+            try {
+              const jsonStr = trimmed.replace(/^data:\s*/, '');
+              const parsed = JSON.parse(jsonStr);
+              const choice = parsed.choices?.[0];
+              const delta = choice?.delta;
 
-              // 2. Regular Content delta
-              const contentChunk = delta.content || '';
-              if (contentChunk) {
-                accumulatedContent += contentChunk;
-                if (!reasoningChunk && onStreamChunk) {
-                  onStreamChunk({ text: accumulatedContent });
-                }
-              }
-
-              // 3. Tool Calls delta
-              if (Array.isArray(delta.tool_calls)) {
-                for (const tc of delta.tool_calls) {
-                  const idx = tc.index ?? 0;
-                  if (!toolCallsMap[idx]) {
-                    toolCallsMap[idx] = {
-                      id: tc.id || `call_${Date.now()}_${idx}`,
-                      name: tc.function?.name || '',
-                      arguments: '',
-                    };
+              if (delta) {
+                // 1. Thinking / Reasoning delta (support multiple provider formats)
+                const reasoningChunk =
+                  delta.reasoning_content ||
+                  delta.reasoning ||
+                  delta.thought ||
+                  delta.thinking ||
+                  '';
+                if (reasoningChunk) {
+                  accumulatedReasoning += reasoningChunk;
+                  if (onStreamChunk) {
+                    onStreamChunk({ thinking: reasoningChunk, text: accumulatedReasoning });
                   }
-                  if (tc.function?.name) {
-                    toolCallsMap[idx].name = tc.function.name;
+                }
+
+                // 2. Regular Content delta
+                const contentChunk = delta.content || '';
+                if (contentChunk) {
+                  accumulatedContent += contentChunk;
+                  if (!reasoningChunk && onStreamChunk) {
+                    onStreamChunk({ text: accumulatedContent });
                   }
-                  if (tc.function?.arguments) {
-                    toolCallsMap[idx].arguments += tc.function.arguments;
-                    if (onStreamChunk) {
-                      onStreamChunk({ toolArgs: toolCallsMap[idx].arguments });
+                }
+
+                // 3. Tool Calls delta
+                if (Array.isArray(delta.tool_calls)) {
+                  for (const tc of delta.tool_calls) {
+                    const idx = tc.index ?? 0;
+                    if (!toolCallsMap[idx]) {
+                      toolCallsMap[idx] = {
+                        id: tc.id || `call_${Date.now()}_${idx}`,
+                        name: tc.function?.name || '',
+                        arguments: '',
+                      };
+                    }
+                    if (tc.function?.name) {
+                      toolCallsMap[idx].name = tc.function.name;
+                    }
+                    if (tc.function?.arguments) {
+                      toolCallsMap[idx].arguments += tc.function.arguments;
+                      if (onStreamChunk) {
+                        onStreamChunk({ toolArgs: toolCallsMap[idx].arguments });
+                      }
                     }
                   }
                 }
               }
+            } catch {
+              // ignore JSON parse partial line errors
             }
-          } catch {
-            // ignore JSON parse partial line errors
           }
         }
+      } finally {
+        reader.releaseLock();
       }
     }
 

@@ -14,7 +14,8 @@ export class AnthropicProvider implements AgentProvider {
     modelIdentifier: string,
     apiKey?: string,
     customBaseUrl?: string,
-    onStreamChunk?: (chunk: any) => void
+    onStreamChunk?: (chunk: any) => void,
+    signal?: AbortSignal
   ): Promise<AgentTurnResponse> {
     const startTime = performance.now();
     const baseUrl = customBaseUrl || this.defaultBaseUrl;
@@ -99,6 +100,7 @@ export class AnthropicProvider implements AgentProvider {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
+      signal,
     });
 
     if (!response.ok) {

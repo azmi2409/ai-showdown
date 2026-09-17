@@ -37,6 +37,84 @@ export interface GameStateSnapshot {
   activeThinking: { side: 'w' | 'b' | null; modelName: string; thoughtText?: string };
 }
 
+function formatClockTime(ms: number): string {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min}m ${sec.toString().padStart(2, '0')}s (${totalSec}s)`;
+}
+
+function buildSystemPrompt(color: 'WHITE' | 'BLACK', opponentName: string, playStyle?: string): string {
+  return `You are a Grandmaster-level chess engine and tactician playing as ${color} against ${opponentName}${playStyle ? ` (${playStyle})` : ''}.
+Your objective is to win with precision and principled play.
+
+Evaluation checklist on every turn:
+1. King Safety: Check for threats, king exposure, checks, mating nets, and back-rank weaknesses. Defend threats first.
+2. Tactical Scanning: Find forcing moves (checks, captures, threats). Spot hanging or undefended pieces.
+3. Positional Strategy: Control the center (e4/d4/e5/d5), develop pieces harmoniously, activate rooks on open files, secure outposts.
+4. Calculation: Evaluate 2-3 candidate moves from the legal moves list. Consider opponent's strongest reply.
+5. Clock Management & Time Strategy:
+   - Digital clocks are running. Reaching 0s is an instant loss on time (Flag fall).
+   - When your clock is comfortable (>60s): calculate deeply and seek best objective lines.
+   - When under time pressure (15s-60s): play quickly, avoid speculative complications, pick clean, solid moves.
+   - When in time scramble (<15s): avoid timeout at all costs—pick an immediate, safe, legal move without hesitation.
+   - When opponent is in severe time trouble: pose practical tactical questions to pressure their clock.
+6. Legal Execution: You MUST pick an exact legal SAN move from the provided list and invoke "make_move".
+
+Always invoke make_move with your chosen move and concise, sharp tactical reasoning incorporating board analysis and time situation.`;
+}
+
+function buildTurnPrompt(params: {
+  color: 'WHITE' | 'BLACK';
+  moveNumber: number;
+  lastMove?: { player: string; san: string };
+  fen: string;
+  inCheck: boolean;
+  myClockMs: number;
+  oppClockMs: number;
+  incrementSec?: number;
+  legalMoves: string[];
+}): string {
+  const myTotalSec = Math.max(0, Math.floor(params.myClockMs / 1000));
+  const oppTotalSec = Math.max(0, Math.floor(params.oppClockMs / 1000));
+  const myFormatted = formatClockTime(params.myClockMs);
+  const oppFormatted = formatClockTime(params.oppClockMs);
+  const timeDelta = myTotalSec - oppTotalSec;
+  const deltaText =
+    timeDelta > 5
+      ? `Time Advantage: +${timeDelta}s ahead of opponent.`
+      : timeDelta < -5
+      ? `Time Deficit: ${timeDelta}s behind opponent (accelerate tempo).`
+      : `Clocks roughly even.`;
+
+  let timeUrgencyBanner = '';
+  if (myTotalSec <= 10) {
+    timeUrgencyBanner = `\n🚨 CRITICAL TIME SCRAMBLE: ONLY ${myTotalSec} SECONDS REMAINING! Move immediately to avoid losing on time (flag-fall)! Pick the safest immediate legal move.`;
+  } else if (myTotalSec <= 30) {
+    timeUrgencyBanner = `\n⏱️ TIME PRESSURE WARNING: Under 30s remaining (${myTotalSec}s). Simplify position and prioritize rapid, safe play.`;
+  } else if (oppTotalSec <= 15) {
+    timeUrgencyBanner = `\n⚡ OPPONENT TIME TROUBLE: Opponent has only ${oppTotalSec}s remaining. Play solid moves that demand precision to pressure their clock.`;
+  }
+
+  const checkAlert = params.inCheck ? `\n⚠️ CRITICAL ALERT: YOU ARE IN CHECK! Defend your King immediately.` : '';
+  const lastMoveText = params.lastMove
+    ? `Opponent (${params.lastMove.player}) played: ${params.lastMove.san}.`
+    : `Match begins.`;
+
+  return `[Turn: ${params.color} | Move #${params.moveNumber}]
+${lastMoveText}${checkAlert}${timeUrgencyBanner}
+Position FEN: ${params.fen}
+Chess Clocks:
+- Your remaining time: ${myFormatted}
+- Opponent remaining time: ${oppFormatted}
+- Clock status: ${deltaText}
+
+Available Legal Moves (${params.legalMoves.length}):
+${params.legalMoves.join(', ')}
+
+Evaluate the position considering your clock situation, calculate candidate lines, and call make_move with your move and strategic reasoning.`;
+}
+
 export class ServerOrchestrator {
   private chess: Chess;
   private matchId: string;
@@ -63,6 +141,7 @@ export class ServerOrchestrator {
 
   private agentMemory: { w: ConversationMessage[]; b: ConversationMessage[] } = { w: [], b: [] };
   private clockTimer: NodeJS.Timeout | null = null;
+  private abortController: AbortController | null = null;
   private isLoopRunning: boolean = false;
   private isPaused: boolean = false;
   private isStepping: boolean = false;
@@ -146,6 +225,7 @@ export class ServerOrchestrator {
     this.matchIndex = params.matchIndex;
 
     this.matchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    this.abortController = new AbortController();
     this.chess = new Chess();
     this.moves = [];
     this.captures = { w: [], b: [] };
@@ -167,13 +247,13 @@ export class ServerOrchestrator {
       w: [
         {
           role: 'system',
-          content: `You are playing chess as WHITE against ${this.blackModel.name}. Use the provided tools (get_board_state, get_legal_moves, make_move, resign) to interact with the board. Calculate deeply and make legal moves in Standard Algebraic Notation (SAN).`,
+          content: buildSystemPrompt('WHITE', this.blackModel.name, this.blackModel.playStyle),
         },
       ],
       b: [
         {
           role: 'system',
-          content: `You are playing chess as BLACK against ${this.whiteModel.name}. Use the provided tools (get_board_state, get_legal_moves, make_move, resign) to interact with the board. Calculate deeply and make legal moves in Standard Algebraic Notation (SAN).`,
+          content: buildSystemPrompt('BLACK', this.whiteModel.name, this.whiteModel.playStyle),
         },
       ],
     };
@@ -181,9 +261,16 @@ export class ServerOrchestrator {
     const whiteLegalMoves = this.chess.moves();
     this.agentMemory.w.push({
       role: 'user',
-      content: `The game has started. You are WHITE. Current position (FEN): ${this.chess.fen()}.\nLegal moves available: ${whiteLegalMoves.join(
-        ', '
-      )}.\nYou MUST invoke the make_move tool with your chosen move from the list above and your strategic reasoning.`,
+      content: buildTurnPrompt({
+        color: 'WHITE',
+        moveNumber: 1,
+        fen: this.chess.fen(),
+        inCheck: this.chess.inCheck(),
+        myClockMs: this.clocks.w,
+        oppClockMs: this.clocks.b,
+        incrementSec: this.timeControl.incrementSeconds,
+        legalMoves: whiteLegalMoves,
+      }),
     });
 
     sseHub.broadcast('init', this.getState());
@@ -215,9 +302,20 @@ export class ServerOrchestrator {
         const legalMoves = this.chess.moves();
         this.agentMemory[turn].push({
           role: 'user',
-          content: `Match resumed. You are ${turn === 'w' ? 'WHITE' : 'BLACK'}. Current position (FEN): ${this.chess.fen()}.\nLegal moves available: ${legalMoves.join(
-            ', '
-          )}.\nInvoke make_move with your chosen move.`,
+          content: buildTurnPrompt({
+            color: turn === 'w' ? 'WHITE' : 'BLACK',
+            moveNumber: Math.floor(this.moves.length / 2) + 1,
+            lastMove: this.moves.length > 0 ? {
+              player: (turn === 'w' ? this.blackModel : this.whiteModel).name,
+              san: this.moves[this.moves.length - 1].san,
+            } : undefined,
+            fen: this.chess.fen(),
+            inCheck: this.chess.inCheck(),
+            myClockMs: this.clocks[turn],
+            oppClockMs: this.clocks[turn === 'w' ? 'b' : 'w'],
+            incrementSec: this.timeControl.incrementSeconds,
+            legalMoves,
+          }),
         });
       }
       this.runTurnLoop();
@@ -260,6 +358,10 @@ export class ServerOrchestrator {
   }
 
   public forfeitMatch(side?: 'w' | 'b'): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
     const forfeitSide = side || this.chess.turn();
     const winner = forfeitSide === 'w' ? 'b' : 'w';
     this.status = 'finished';
@@ -273,7 +375,12 @@ export class ServerOrchestrator {
   }
 
   public stopMatch(): void {
+    this.status = 'idle';
     this.stopClock();
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
     this.isPaused = false;
     this.isStepping = false;
     this.isLoopRunning = false;
@@ -285,7 +392,11 @@ export class ServerOrchestrator {
     let lastTime = Date.now();
 
     this.clockTimer = setInterval(() => {
-      if (this.status !== 'active' || this.isPaused) return;
+      if (this.status !== 'active') {
+        this.stopClock();
+        return;
+      }
+      if (this.isPaused) return;
 
       const now = Date.now();
       const delta = now - lastTime;
@@ -320,12 +431,14 @@ export class ServerOrchestrator {
 
   // --- Turn Loop Execution on Server ---
   private async runTurnLoop(): Promise<void> {
+    const loopMatchId = this.matchId;
     this.isLoopRunning = true;
 
     try {
-      while (this.status === 'active') {
+      while (this.status === 'active' && this.matchId === loopMatchId) {
         if (this.isPaused) {
           await new Promise((resolve) => setTimeout(resolve, 200));
+          if (this.matchId !== loopMatchId || this.status !== 'active') break;
           continue;
         }
 
@@ -364,6 +477,7 @@ export class ServerOrchestrator {
           const thinkDelay =
             this.speedMode === 'instant' ? 40 : this.speedMode === '0.5s' ? 300 : 700;
           await new Promise((resolve) => setTimeout(resolve, thinkDelay));
+          if (this.matchId !== loopMatchId || this.status !== 'active') break;
 
           const exec = this.applyMove(algoResult.san, {
             reasoning: algoResult.reasoning,
@@ -397,14 +511,39 @@ export class ServerOrchestrator {
               latencyMs: algoResult.latencyMs,
               timestamp: Date.now(),
             });
+
+            // Notify opponent of the move
+            const opponent = turn === 'w' ? 'b' : 'w';
+            const oppLegalMoves = this.chess.moves();
+            this.agentMemory[opponent].push({
+              role: 'user',
+              content: buildTurnPrompt({
+                color: opponent === 'w' ? 'WHITE' : 'BLACK',
+                moveNumber: Math.floor(this.moves.length / 2) + 1,
+                lastMove: { player: currentModel.name, san: algoResult.san },
+                fen: this.chess.fen(),
+                inCheck: this.chess.inCheck(),
+                myClockMs: this.clocks[opponent],
+                oppClockMs: this.clocks[turn],
+                incrementSec: this.timeControl.incrementSeconds,
+                legalMoves: oppLegalMoves,
+              }),
+            });
           }
         } else {
           // --- LLM Network API Turn Execution ---
           while (!moveSuccessfullyMade && retries < MAX_RETRIES) {
-            if (this.status !== 'active' || this.isPaused) break;
+            if (this.status !== 'active' || this.isPaused || this.matchId !== loopMatchId) break;
 
             try {
+              // Prune old history to preserve focus and prevent context drift
+              if (this.agentMemory[turn].length > 16) {
+                const sys = this.agentMemory[turn][0];
+                this.agentMemory[turn] = [sys, ...this.agentMemory[turn].slice(-10)];
+              }
+
               const memory = this.agentMemory[turn];
+              const signal = this.abortController?.signal;
               const response = await provider.sendTurn(
                 memory,
                 CHESS_TOOLS,
@@ -412,6 +551,7 @@ export class ServerOrchestrator {
                 undefined,
                 'http://localhost:20128/v1',
                 (chunk) => {
+                  if (this.matchId !== loopMatchId || this.status !== 'active') return;
                   if (chunk.thinking || chunk.text) {
                     capturedReasoning = chunk.text || chunk.thinking || '';
                     this.activeThinking = {
@@ -435,8 +575,11 @@ export class ServerOrchestrator {
                       }
                     } catch {}
                   }
-                }
+                },
+                signal
               );
+
+              if (this.matchId !== loopMatchId || this.status !== 'active') break;
 
               this.agentMemory[turn].push(response.rawAssistantMessage);
 
@@ -467,9 +610,10 @@ export class ServerOrchestrator {
                 const legalMoves = this.chess.moves();
                 this.agentMemory[turn].push({
                   role: 'user',
-                  content: `Error: You must invoke the make_move tool. Available legal moves: ${legalMoves.join(
-                    ', '
-                  )}. Example: call make_move with {"move":"${legalMoves[0]}"}.`,
+                  content: `CRITICAL ERROR: You responded with raw text instead of invoking the "make_move" tool.
+You MUST invoke the make_move tool. Available legal moves (${legalMoves.length}):
+${legalMoves.join(', ')}
+Call make_move immediately with {"move": "${legalMoves[0]}"} or another legal move from the list.`,
                 });
                 continue;
               }
@@ -511,14 +655,39 @@ export class ServerOrchestrator {
                       isCheckmate: this.chess.isCheckmate(),
                       isGameOver: this.chess.isGameOver(),
                     });
+
+                    // Notify opponent of the move
+                    const opponent = turn === 'w' ? 'b' : 'w';
+                    const oppLegalMoves = this.chess.moves();
+                    this.agentMemory[opponent].push({
+                      role: 'user',
+                      content: buildTurnPrompt({
+                        color: opponent === 'w' ? 'WHITE' : 'BLACK',
+                        moveNumber: Math.floor(this.moves.length / 2) + 1,
+                        lastMove: { player: currentModel.name, san: exec.moveRecord?.san || moveArg },
+                        fen: this.chess.fen(),
+                        inCheck: this.chess.inCheck(),
+                        myClockMs: this.clocks[opponent],
+                        oppClockMs: this.clocks[turn],
+                        incrementSec: this.timeControl.incrementSeconds,
+                        legalMoves: oppLegalMoves,
+                      }),
+                    });
                   } else {
                     retries++;
                     illegalAttemptsThisTurn++;
                     this.illegalAttempts[turn]++;
                     toolResult = {
-                      error: exec.error,
+                      error: `ILLEGAL MOVE: "${moveArg}" is not valid in this position.`,
                       legal_moves: this.chess.moves(),
                     };
+                    this.agentMemory[turn].push({
+                      role: 'user',
+                      content: `ILLEGAL MOVE: "${moveArg}" cannot be played.
+Choose strictly from these legal moves (${this.chess.moves().length}):
+${this.chess.moves().join(', ')}
+Invoke make_move with your chosen legal move.`,
+                    });
                   }
                 } else if (tc.name === 'get_board_state') {
                   toolResult = {
@@ -549,12 +718,15 @@ export class ServerOrchestrator {
                 if (moveSuccessfullyMade) break;
               }
             } catch (err: any) {
+              if (this.matchId !== loopMatchId || this.status !== 'active') break;
               console.error(`Backend Agent error (${currentModel.name}):`, err.message);
               retries++;
               await new Promise((resolve) => setTimeout(resolve, 500));
             }
           }
         }
+
+        if (this.matchId !== loopMatchId || this.status !== 'active') break;
 
         // Anti-Forfeit Safe Fallback
         if (!moveSuccessfullyMade && this.status === 'active') {
@@ -580,9 +752,29 @@ export class ServerOrchestrator {
                 isCheckmate: this.chess.isCheckmate(),
                 isGameOver: this.chess.isGameOver(),
               });
+
+              // Notify opponent of fallback move
+              const opponent = turn === 'w' ? 'b' : 'w';
+              const oppLegalMoves = this.chess.moves();
+              this.agentMemory[opponent].push({
+                role: 'user',
+                content: buildTurnPrompt({
+                  color: opponent === 'w' ? 'WHITE' : 'BLACK',
+                  moveNumber: Math.floor(this.moves.length / 2) + 1,
+                  lastMove: { player: currentModel.name, san: fallbackMove },
+                  fen: this.chess.fen(),
+                  inCheck: this.chess.inCheck(),
+                  myClockMs: this.clocks[opponent],
+                  oppClockMs: this.clocks[turn],
+                  incrementSec: this.timeControl.incrementSeconds,
+                  legalMoves: oppLegalMoves,
+                }),
+              });
             }
           }
         }
+
+        if (this.matchId !== loopMatchId || this.status !== 'active') break;
 
         // Clear active thinking
         this.activeThinking = { side: null, modelName: '' };
@@ -645,7 +837,7 @@ export class ServerOrchestrator {
         }
 
         // Delay between moves
-        if (this.status === 'active') {
+        if (this.status === 'active' && this.matchId === loopMatchId) {
           const delayMs =
             this.speedMode === 'instant'
               ? 40
@@ -653,10 +845,13 @@ export class ServerOrchestrator {
               ? 500
               : 1000;
           await new Promise((resolve) => setTimeout(resolve, delayMs));
+          if (this.matchId !== loopMatchId || this.status !== 'active') break;
         }
       }
     } finally {
-      this.isLoopRunning = false;
+      if (this.matchId === loopMatchId) {
+        this.isLoopRunning = false;
+      }
     }
   }
 

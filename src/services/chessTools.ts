@@ -6,18 +6,19 @@ export const CHESS_TOOLS: ToolDefinition[] = [
     function: {
       name: 'make_move',
       description:
-        'Make a move on the chess board. The move MUST be in Standard Algebraic Notation (SAN) and must be a legal move in the current position.',
+        'Execute the best chess move on the board in Standard Algebraic Notation (SAN). The move MUST be chosen from the available legal moves in the position.',
       parameters: {
         type: 'object',
         properties: {
           move: {
             type: 'string',
             description:
-              'Chess move in Standard Algebraic Notation (SAN). Examples: "e4", "Nf3", "O-O", "Bxe5", "e8=Q"',
+              'Legal chess move in Standard Algebraic Notation (SAN). Examples: "e4", "Nf3", "O-O", "Bxe5", "e8=Q"',
           },
           reasoning: {
             type: 'string',
-            description: 'Your strategic calculation or reason for playing this move.',
+            description:
+              'Tactical calculation and clock strategy: candidate evaluation, time management consideration (e.g. playing rapidly in time trouble or calculating deeply with comfortable clock), and plan.',
           },
         },
         required: ['move'],

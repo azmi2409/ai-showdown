@@ -70,6 +70,7 @@ export const MatchesView: React.FC<MatchesViewProps> = () => {
     document.body.appendChild(link);
     link.click();
     link.remove();
+    URL.revokeObjectURL(url);
   };
 
   // Filter logic
