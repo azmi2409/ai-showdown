@@ -1,5 +1,5 @@
 import { Chess, Square } from 'chess.js';
-import { CHESS_TOOLS } from '../../src/services/chessTools';
+import { CHESS_TOOLS, getToolsForMode } from '../../src/services/chessTools';
 import { OpenAIProvider } from '../../src/services/providers/OpenAIProvider';
 import { AlgorithmEngine } from '../../src/services/algorithmEngine';
 import { VariantsEngine } from '../../src/services/variantsEngine';
@@ -610,9 +610,14 @@ export class ServerOrchestrator {
 
               const memory = this.agentMemory[turn];
               const signal = this.abortController?.signal;
+              const tools = getToolsForMode(this.gameMode, {
+                spells: turn === 'w' ? this.whiteSpells : this.blackSpells,
+                reserves: this.crazyhouseReserves[turn],
+                duckSquare: this.duckSquare,
+              });
               const response = await provider.sendTurn(
                 memory,
-                CHESS_TOOLS,
+                tools,
                 currentModel.modelIdentifier,
                 undefined,
                 'http://localhost:20128/v1',
@@ -676,10 +681,9 @@ export class ServerOrchestrator {
                 const legalMoves = this.getLegalMoves(turn);
                 this.agentMemory[turn].push({
                   role: 'user',
-                  content: `CRITICAL ERROR: You responded with raw text instead of invoking the "make_move" tool.
-You MUST invoke the make_move tool. Available legal moves (${legalMoves.length}):
-${legalMoves.join(', ')}
-Call make_move immediately with {"move": "${legalMoves[0]}"} or another legal move from the list.`,
+                  content: `CRITICAL ERROR: You responded with raw text instead of invoking an action tool.
+You MUST invoke an action tool like "make_move", "cast_spell", or "drop_piece". Available legal moves (${legalMoves.length}):
+${legalMoves.join(', ')}`,
                 });
                 continue;
               }
@@ -694,7 +698,12 @@ Call make_move immediately with {"move": "${legalMoves[0]}"} or another legal mo
                 const toolCallStart = performance.now();
                 let toolResult: any;
 
-                if (tc.name === 'make_move') {
+                if (
+                  tc.name === 'make_move' ||
+                  tc.name === 'make_move_and_duck' ||
+                  tc.name === 'atomic_capture' ||
+                  tc.name === 'use_portal'
+                ) {
                   const moveArg = tc.arguments.move || '';
                   const reasoningArg = tc.arguments.reasoning || capturedReasoning || '';
                   if (reasoningArg && !capturedReasoning) capturedReasoning = reasoningArg;
@@ -706,6 +715,9 @@ Call make_move immediately with {"move": "${legalMoves[0]}"} or another legal mo
                   });
 
                   if (exec.success) {
+                    if (this.gameMode === 'duck_chess' && tc.arguments.duck_square) {
+                      this.duckSquare = tc.arguments.duck_square;
+                    }
                     moveSuccessfullyMade = true;
                     toolResult = {
                       success: true,
@@ -729,6 +741,8 @@ Call make_move immediately with {"move": "${legalMoves[0]}"} or another legal mo
                       fogVision: this.fogVision,
                       duckSquare: this.duckSquare,
                       crazyhouseReserves: this.crazyhouseReserves,
+                      whiteSpells: this.whiteSpells,
+                      blackSpells: this.blackSpells,
                       gameMode: this.gameMode,
                       portalSquares: this.portalSquares,
                     });
@@ -753,6 +767,8 @@ Call make_move immediately with {"move": "${legalMoves[0]}"} or another legal mo
                         portalSquares: this.gameMode === 'mutators' ? this.portalSquares : undefined,
                         duckSquare: this.duckSquare,
                         reserves: this.crazyhouseReserves,
+                        spells: opponent === 'w' ? this.whiteSpells : this.blackSpells,
+                        frozenSquare: this.frozenSquare?.turnExpires === opponent ? this.frozenSquare.square : undefined,
                       }),
                     });
                   } else {
@@ -769,9 +785,92 @@ Call make_move immediately with {"move": "${legalMoves[0]}"} or another legal mo
                       content: `ILLEGAL MOVE: "${moveArg}" cannot be played.
 Choose strictly from these legal moves (${legal.length}):
 ${legal.join(', ')}
-Invoke make_move with your chosen legal move.`,
+Invoke an action tool with your chosen move.`,
                     });
                   }
+                } else if (tc.name === 'drop_piece') {
+                  const piece = (tc.arguments.piece || '').toUpperCase();
+                  const square = (tc.arguments.square || '').toLowerCase();
+                  const dropSan = `${piece}@${square}`;
+                  const reasoningArg = tc.arguments.reasoning || capturedReasoning || '';
+                  if (reasoningArg && !capturedReasoning) capturedReasoning = reasoningArg;
+
+                  const exec = this.applyMove(dropSan, {
+                    reasoning: reasoningArg,
+                    latencyMs: Math.round(performance.now() - turnStartTime),
+                    toolCallsCount: toolCallEntries.length + 1,
+                  });
+
+                  if (exec.success) {
+                    moveSuccessfullyMade = true;
+                    toolResult = {
+                      success: true,
+                      move_played: dropSan,
+                      board_fen: this.chess.fen(),
+                    };
+                    this.clocks[turn] += this.timeControl.incrementSeconds * 1000;
+                    sseHub.broadcast('move', {
+                      moveRecord: exec.moveRecord,
+                      fen: this.chess.fen(),
+                      clocks: this.clocks,
+                      captures: this.captures,
+                      turn: this.chess.turn(),
+                      inCheck: this.chess.inCheck(),
+                      isCheckmate: this.chess.isCheckmate(),
+                      isGameOver: this.chess.isGameOver(),
+                      fogVision: this.fogVision,
+                      duckSquare: this.duckSquare,
+                      crazyhouseReserves: this.crazyhouseReserves,
+                      whiteSpells: this.whiteSpells,
+                      blackSpells: this.blackSpells,
+                      gameMode: this.gameMode,
+                      portalSquares: this.portalSquares,
+                    });
+                    const opponent = turn === 'w' ? 'b' : 'w';
+                    const oppLegalMoves = this.getLegalMoves(opponent);
+                    this.agentMemory[opponent].push({
+                      role: 'user',
+                      content: buildTurnPrompt({
+                        color: opponent === 'w' ? 'WHITE' : 'BLACK',
+                        moveNumber: Math.floor(this.moves.length / 2) + 1,
+                        lastMove: { player: currentModel.name, san: dropSan },
+                        fen: this.chess.fen(),
+                        inCheck: this.chess.inCheck(),
+                        myClockMs: this.clocks[opponent],
+                        oppClockMs: this.clocks[turn],
+                        incrementSec: this.timeControl.incrementSeconds,
+                        legalMoves: oppLegalMoves,
+                        gameMode: this.gameMode,
+                        fogBoard: this.gameMode === 'fog_of_war' ? VariantsEngine.formatFogBoard(this.chess, opponent, this.fogVision[opponent]) : undefined,
+                        portalSquares: this.gameMode === 'mutators' ? this.portalSquares : undefined,
+                        duckSquare: this.duckSquare,
+                        reserves: this.crazyhouseReserves,
+                        spells: opponent === 'w' ? this.whiteSpells : this.blackSpells,
+                        frozenSquare: this.frozenSquare?.turnExpires === opponent ? this.frozenSquare.square : undefined,
+                      }),
+                    });
+                  } else {
+                    retries++;
+                    illegalAttemptsThisTurn++;
+                    this.illegalAttempts[turn]++;
+                    const legal = this.getLegalMoves(turn);
+                    toolResult = {
+                      error: `ILLEGAL DROP: "${dropSan}" is not valid: ${exec.error}`,
+                      legal_moves: legal,
+                    };
+                    this.agentMemory[turn].push({
+                      role: 'user',
+                      content: `ILLEGAL DROP: "${dropSan}" cannot be placed. Choose strictly from these legal moves:\n${legal.join(', ')}`,
+                    });
+                  }
+                } else if (tc.name === 'place_duck') {
+                  const sq = tc.arguments.square;
+                  this.duckSquare = sq;
+                  toolResult = {
+                    success: true,
+                    message: `Neutral Duck blocker repositioned to ${sq}.`,
+                    duck_square: sq,
+                  };
                 } else if (tc.name === 'cast_spell') {
                   const spellId = tc.arguments.spell_id;
                   const mySpells = turn === 'w' ? this.whiteSpells : this.blackSpells;
