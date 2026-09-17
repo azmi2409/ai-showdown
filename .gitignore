@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Database & Local match data
+server/data/
+*.db.json
+*showdown-db.json
