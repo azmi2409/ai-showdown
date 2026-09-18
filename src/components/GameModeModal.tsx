@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, Sparkles, BookOpen, Swords, ShieldAlert } from 'lucide-react';
 import { GameMode } from '../types';
 
@@ -126,8 +127,8 @@ export const GameModeModal: React.FC<GameModeModalProps> = ({
 }) => {
   const current = GAME_MODE_DETAILS[gameMode] || GAME_MODE_DETAILS.standard;
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
+  return createPortal(
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 9999 }}>
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
@@ -259,6 +260,7 @@ export const GameModeModal: React.FC<GameModeModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
