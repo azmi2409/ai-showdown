@@ -1141,8 +1141,9 @@ Invoke an action tool with your chosen move.`,
         this.neuralLogs.push(neuralEntry);
         sseHub.broadcast('log', neuralEntry);
 
-        // Check game over (standard checkmate/stalemate/draw OR atomic explosion king destruction)
-        if (this.status === 'finished' && this.result) {
+        // Check game over (atomic explosion king destruction OR standard checkmate/stalemate/draw)
+        if (this.result) {
+          this.status = 'finished';
           // Delay briefly (600ms) so frontend can animate the explosion/move before game over overlays
           await new Promise((resolve) => setTimeout(resolve, 600));
           this.handleMatchFinished();
@@ -1310,15 +1311,13 @@ Invoke an action tool with your chosen move.`,
         if (explosion.kingDestroyed) {
           const loser = explosion.kingDestroyed;
           const winner = loser === 'w' ? 'b' : 'w';
-          this.status = 'finished';
           this.result = {
             winner,
             reason: 'checkmate',
             description: `${loser === 'w' ? 'White' : 'Black'} King destroyed in atomic blast!`,
             timestamp: Date.now(),
           };
-          // Note: handleMatchFinished() will be called AFTER the move event is broadcasted
-          // so that the frontend receives the move, updated FEN, and explosion coordinates first!
+          // Note: Keep this.status as 'active' until post-turn processing so line 1118 does not break!
         }
       }
 
