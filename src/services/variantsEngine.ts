@@ -9,6 +9,33 @@ export interface AtomicExplosionResult {
 
 export class VariantsEngine {
   /**
+   * Safe parser to convert a FEN piece placement string into an 8x8 board grid.
+   * Works for custom variants where chess.js rejects the FEN (missing kings in Atomic, etc.)
+   */
+  public static parseFenToBoard(fen: string): ({ type: string; color: 'w' | 'b' } | null)[][] {
+    const [placement] = (fen || '').trim().split(/\s+/);
+    if (!placement) return [];
+    const rows = placement.split('/');
+    const board: ({ type: string; color: 'w' | 'b' } | null)[][] = [];
+
+    for (let r = 0; r < 8; r++) {
+      const rowStr = rows[r] || '8';
+      const row: ({ type: string; color: 'w' | 'b' } | null)[] = [];
+      for (const ch of rowStr) {
+        if (ch >= '1' && ch <= '8') {
+          const emptyCount = parseInt(ch, 10);
+          for (let i = 0; i < emptyCount; i++) row.push(null);
+        } else {
+          const color = ch === ch.toUpperCase() ? 'w' : 'b';
+          row.push({ type: ch.toLowerCase(), color });
+        }
+      }
+      board.push(row);
+    }
+    return board;
+  }
+
+  /**
    * Check if a square has a Duck blocking it in Duck Chess
    */
   public static isDuckBlocked(square: string, duckSquare?: string | null): boolean {

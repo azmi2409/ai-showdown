@@ -17,6 +17,7 @@ import { audioService } from './services/audioService';
 import { apiService } from './services/apiService';
 import { TournamentManager } from './services/tournamentManager';
 import { AlgorithmEngine } from './services/algorithmEngine';
+import { VariantsEngine } from './services/variantsEngine';
 import { DEFAULT_MODELS } from './services/defaultModels';
 import { useGameStore } from './store/useGameStore';
 import {
@@ -107,12 +108,12 @@ export const App: React.FC = () => {
     matchIndex: number;
   } | null>(null);
 
-  // Create lightweight Chess instance from server FEN for board rendering
+  // Create lightweight Chess instance from server FEN for board calculations
   const liveChess = useMemo(() => {
     try {
       return new Chess(liveGame.fen);
     } catch {
-      return new Chess();
+      return null;
     }
   }, [liveGame.fen]);
 
@@ -121,9 +122,12 @@ export const App: React.FC = () => {
     const pieceValues: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
     let whiteScore = 0;
     let blackScore = 0;
-    const board = liveChess.board();
-    for (let r = 0; r < 8; r++) {
-      for (let c = 0; c < 8; c++) {
+    const board = liveChess
+      ? liveChess.board()
+      : VariantsEngine.parseFenToBoard(liveGame.fen);
+
+    for (let r = 0; r < board.length; r++) {
+      for (let c = 0; c < (board[r]?.length || 0); c++) {
         const piece = board[r][c];
         if (piece) {
           const val = pieceValues[piece.type] || 0;
@@ -137,7 +141,7 @@ export const App: React.FC = () => {
       black: blackScore,
       delta: whiteScore - blackScore,
     };
-  }, [liveChess]);
+  }, [liveChess, liveGame.fen]);
 
   // Keep speed mode synced with backend
   useEffect(() => {
@@ -555,7 +559,8 @@ export const App: React.FC = () => {
 
             {/* Chess Board */}
             <ChessBoard
-              chess={liveChess}
+              chess={liveChess || undefined}
+              fen={liveGame.fen}
               lastMove={lastMove}
               inCheck={liveGame.inCheck}
               turn={liveGame.turn}

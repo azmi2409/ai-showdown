@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Chess, Square } from 'chess.js';
 import { GameMode, MoveRecord, SpectatorVision } from '../types';
+import { VariantsEngine } from '../services/variantsEngine';
 
 interface ChessBoardProps {
-  chess: Chess;
+  chess?: Chess;
+  fen?: string;
   lastMove?: MoveRecord;
   inCheck: boolean;
   turn: 'w' | 'b';
@@ -37,6 +39,7 @@ const RANKS = [8, 7, 6, 5, 4, 3, 2, 1]; // Top-to-bottom for White perspective
 
 export const ChessBoard: React.FC<ChessBoardProps> = ({
   chess,
+  fen,
   lastMove,
   inCheck,
   turn,
@@ -47,7 +50,15 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   duckSquare,
   crazyhouseReserves = { w: [], b: [] },
 }) => {
-  const board = chess.board();
+  // Use robust FEN parser that cannot crash or reset when custom variants have non-standard pieces/kings
+  const board = useMemo(() => {
+    const targetFen = fen || chess?.fen();
+    if (targetFen) {
+      const parsed = VariantsEngine.parseFenToBoard(targetFen);
+      if (parsed.length === 8) return parsed;
+    }
+    return chess ? chess.board() : new Chess().board();
+  }, [fen, chess]);
 
   // Find King square if currently in check
   let checkKingSquare: string | null = null;
