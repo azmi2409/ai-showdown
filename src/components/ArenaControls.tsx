@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Play,
   Pause,
@@ -11,10 +11,12 @@ import {
   EyeOff,
   Sparkles,
   CloudFog,
+  HelpCircle,
 } from 'lucide-react';
 import { ModelConfig, TimeControl, GameMode, SpectatorVision, AVAILABLE_MODIFIERS, AVAILABLE_SPELLS } from '../types';
 import { SpeedMode } from '../services/GameOrchestrator';
 import { AlgorithmEngine } from '../services/algorithmEngine';
+import { GameModeModal } from './GameModeModal';
 
 const isAlgo = (m?: ModelConfig | null) =>
   !!m && (m.provider === 'algorithm' || AlgorithmEngine.isAlgorithmModel(m.id));
@@ -95,6 +97,7 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
   onForfeit,
   onResetGame,
 }) => {
+  const [showRulesModal, setShowRulesModal] = useState(false);
   const isPlaying = gameStatus === 'active';
   const isPaused = gameStatus === 'paused';
   const isIdle = gameStatus === 'idle' || gameStatus === 'finished';
@@ -133,10 +136,31 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
 
       {/* Game Mode Selector */}
       <div className="form-group">
-        <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Sparkles size={14} color="var(--neon-cyan)" />
-          <span>Game Mode</span>
-        </label>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+            <Sparkles size={14} color="var(--neon-cyan)" />
+            <span>Game Mode</span>
+          </label>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{
+              padding: '2px 8px',
+              fontSize: '11px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              borderRadius: '4px',
+              borderColor: 'rgba(6, 182, 212, 0.4)',
+              color: 'var(--neon-cyan)',
+            }}
+            onClick={() => setShowRulesModal(true)}
+            title="View Game Mode Rules & Mechanics"
+          >
+            <HelpCircle size={12} />
+            <span>Rules</span>
+          </button>
+        </div>
         <select
           className="select-input"
           value={gameMode}
@@ -594,6 +618,15 @@ export const ArenaControls: React.FC<ArenaControlsProps> = ({
           <span>Reset Match</span>
         </button>
       </div>
+
+      {/* Game Mode Rules & Description Modal */}
+      {showRulesModal && (
+        <GameModeModal
+          gameMode={gameMode}
+          onClose={() => setShowRulesModal(false)}
+          onSelectMode={(mode) => onSetGameMode(mode)}
+        />
+      )}
     </div>
   );
 };
