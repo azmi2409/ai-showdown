@@ -66,6 +66,11 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   const whiteVisionSet = new Set(fogVision.w);
   const blackVisionSet = new Set(fogVision.b);
 
+  // Atomic Chess Explosion squares
+  const atomicExplosion = lastMove?.atomicExplosion;
+  const explodedCenter = atomicExplosion?.explodedSquare;
+  const destroyedSquareSet = new Set(atomicExplosion?.destroyedPieces.map((p) => p.square) || []);
+
   return (
     <div className="chess-board-wrapper">
       {/* Crazyhouse Reserve - Black */}
@@ -97,6 +102,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             const isCheckSquare = inCheck && checkKingSquare === squareName;
             const isPortal = gameMode === 'mutators' && portalSquares.includes(squareName);
             const isDuck = gameMode === 'duck_chess' && duckSquare === squareName;
+            const isExplosionCenter = explodedCenter === squareName;
+            const isExplosionVaporized = destroyedSquareSet.has(squareName);
 
             // Fog of war determination
             const isFogMode = gameMode === 'fog_of_war';
@@ -129,7 +136,9 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                   isLastMoveSquare ? 'last-move' : ''
                 } ${isCheckSquare ? 'in-check' : ''} ${isPortal ? 'portal-tile' : ''} ${
                   isDuck ? 'duck-tile' : ''
-                } ${isFogMode && isShrouded ? 'fog-tile' : ''}`}
+                } ${isFogMode && isShrouded ? 'fog-tile' : ''} ${
+                  isExplosionCenter ? 'atomic-epicenter' : ''
+                } ${isExplosionVaporized && !isExplosionCenter ? 'atomic-blast-radius' : ''}`}
                 title={squareName}
               >
                 {/* File coordinate (only bottom rank) */}
@@ -157,6 +166,13 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                   <div className="fog-overlay" title="Veiled in Fog of War">
                     {!showPiece && <span className="fog-question">?</span>}
                   </div>
+                )}
+
+                {/* Atomic Explosion Blast FX */}
+                {isExplosionCenter && (
+                  <span className="atomic-blast-icon" title="Nuclear Epicenter">
+                    💥
+                  </span>
                 )}
 
                 {/* Piece Rendering */}
