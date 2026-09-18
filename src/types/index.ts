@@ -169,6 +169,11 @@ export interface MoveRecord {
   latencyMs: number;
   reasoning?: string;
   toolCallsCount: number;
+  atomicExplosion?: {
+    explodedSquare: string;
+    destroyedPieces: { square: string; piece: string; color: 'w' | 'b' }[];
+    kingDestroyed?: 'w' | 'b' | null;
+  };
 }
 
 export interface GameResult {

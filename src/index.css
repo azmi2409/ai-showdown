@@ -1386,3 +1386,79 @@ body {
   color: #94a3b8;
   text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
 }
+
+/* Atomic Chess Explosion Effects */
+.atomic-epicenter {
+  box-shadow: inset 0 0 24px rgba(239, 68, 68, 0.9), 0 0 16px rgba(249, 115, 22, 0.8) !important;
+  background-color: rgba(239, 68, 68, 0.45) !important;
+  animation: epicenterShock 0.8s ease-out forwards;
+  z-index: 5;
+}
+
+.atomic-blast-radius {
+  box-shadow: inset 0 0 18px rgba(249, 115, 22, 0.7) !important;
+  background-color: rgba(249, 115, 22, 0.3) !important;
+  animation: blastShock 0.8s ease-out forwards;
+  z-index: 4;
+}
+
+.atomic-blast-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 32px;
+  z-index: 6;
+  filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.9));
+  animation: explosionExpand 0.8s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes epicenterShock {
+  0% {
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: inset 0 0 35px rgba(255, 255, 255, 1), 0 0 25px #ef4444;
+  }
+  30% {
+    background-color: rgba(239, 68, 68, 0.6);
+    box-shadow: inset 0 0 28px rgba(239, 68, 68, 0.9), 0 0 20px #f97316;
+  }
+  100% {
+    background-color: rgba(239, 68, 68, 0.35);
+    box-shadow: inset 0 0 18px rgba(239, 68, 68, 0.8);
+  }
+}
+
+@keyframes blastShock {
+  0% {
+    background-color: rgba(255, 255, 255, 0.7);
+    box-shadow: inset 0 0 25px rgba(255, 255, 255, 0.9);
+  }
+  40% {
+    background-color: rgba(249, 115, 22, 0.5);
+    box-shadow: inset 0 0 20px rgba(249, 115, 22, 0.8);
+  }
+  100% {
+    background-color: rgba(249, 115, 22, 0.25);
+    box-shadow: inset 0 0 14px rgba(249, 115, 22, 0.6);
+  }
+}
+
+@keyframes explosionExpand {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1.6);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.8;
+  }
+}

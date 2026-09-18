@@ -1141,7 +1141,14 @@ Invoke an action tool with your chosen move.`,
         this.neuralLogs.push(neuralEntry);
         sseHub.broadcast('log', neuralEntry);
 
-        // Check game over
+        // Check game over (standard checkmate/stalemate/draw OR atomic explosion king destruction)
+        if (this.status === 'finished' && this.result) {
+          // Delay briefly (600ms) so frontend can animate the explosion/move before game over overlays
+          await new Promise((resolve) => setTimeout(resolve, 600));
+          this.handleMatchFinished();
+          break;
+        }
+
         if (this.chess.isGameOver()) {
           this.status = 'finished';
           let winner: 'w' | 'b' | 'draw' = 'draw';
@@ -1293,10 +1300,12 @@ Invoke an action tool with your chosen move.`,
       }
 
       let extraEffectNote = '';
+      let atomicExplosionResult: any = undefined;
 
       // Atomic Chess Rules
       if (this.gameMode === 'atomic_chess' && move.captured) {
         const explosion = VariantsEngine.resolveAtomicCapture(this.chess, move.to as Square, move.color);
+        atomicExplosionResult = explosion;
         extraEffectNote += ` • 💥 [Atomic explosion on ${move.to}: ${explosion.destroyedPieces.length} piece(s) vaporized]`;
         if (explosion.kingDestroyed) {
           const loser = explosion.kingDestroyed;
@@ -1308,7 +1317,8 @@ Invoke an action tool with your chosen move.`,
             description: `${loser === 'w' ? 'White' : 'Black'} King destroyed in atomic blast!`,
             timestamp: Date.now(),
           };
-          this.handleMatchFinished();
+          // Note: handleMatchFinished() will be called AFTER the move event is broadcasted
+          // so that the frontend receives the move, updated FEN, and explosion coordinates first!
         }
       }
 
@@ -1408,6 +1418,7 @@ Invoke an action tool with your chosen move.`,
         latencyMs: metadata.latencyMs,
         reasoning: (metadata.reasoning || '') + extraEffectNote,
         toolCallsCount: metadata.toolCallsCount,
+        atomicExplosion: atomicExplosionResult,
       };
 
       this.moves.push(moveRecord);

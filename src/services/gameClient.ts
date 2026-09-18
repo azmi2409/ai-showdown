@@ -126,7 +126,9 @@ class GameClient {
         });
 
         // Sound effects based on move events
-        if (isCheckmate) {
+        if (moveRecord?.atomicExplosion) {
+          audioService.playExplosion();
+        } else if (isCheckmate) {
           audioService.playCheckmate();
         } else if (inCheck) {
           audioService.playCheck();

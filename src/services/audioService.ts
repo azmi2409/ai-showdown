@@ -97,6 +97,59 @@ class AudioService {
     osc2.stop(now + 0.14);
   }
 
+  public playExplosion(): void {
+    const ctx = this.initCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // Noise buffer for blast
+    const bufferSize = ctx.sampleRate * 0.5;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, now);
+    filter.frequency.exponentialRampToValueAtTime(80, now + 0.45);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.6, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.onended = () => {
+      try {
+        noise.disconnect();
+        filter.disconnect();
+        gain.disconnect();
+      } catch {}
+    };
+
+    noise.start(now);
+    noise.stop(now + 0.5);
+
+    // Deep sub-bass boom
+    const sub = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(120, now);
+    sub.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+    subGain.gain.setValueAtTime(0.5, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    this.routeNode(sub, subGain, ctx);
+    sub.start(now);
+    sub.stop(now + 0.4);
+  }
+
   public playCheck(): void {
     const ctx = this.initCtx();
     if (!ctx) return;
